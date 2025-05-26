@@ -2,7 +2,7 @@ import { fetchStockData } from './fetchData.js';
 import { initializeDatabase, insertStocks } from './db.js';
 import { setTimeout } from 'timers/promises';
 
-async function runPipeline() {
+export async function runPipeline() {
   try {
     await initializeDatabase();
 
@@ -36,5 +36,4 @@ async function runPipeline() {
   }
 }
 
-// Run the pipeline
 runPipeline();
