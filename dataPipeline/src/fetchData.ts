@@ -4,35 +4,41 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export interface Stock {
-  symbol: string;
-  name: string;
-  price: number;
-  volume: number;
-  percent_change: number;
-  market_cap: number;
-  sector: string;
+  ticker: string;
+  target_from: string;
+  target_to: string;
+  company: string;
+  action: string;
+  brokerage: string;
+  rating_from: string;
+  rating_to: string;
+  time: string;
 }
 
-export async function fetchStockData(): Promise<Stock[]> {
+interface ApiResponse {
+  items: Stock[];
+  next_page: string | null;
+}
+
+export async function fetchStockData(nextPage?: string): Promise<ApiResponse> {
+  const apiUrl = process.env.API_URL;
+  const token = process.env.API_TOKEN;
+  const url = nextPage ? `${apiUrl}?next_page=${nextPage}` : apiUrl;
+
+  if (!token) {
+    throw new Error('API_TOKEN environment variable is not set');
+  }
+
   try {
-    const apiUrl = process.env.API_URL || 'https://api.example.com/stocks';
-    const response = await axios.get(apiUrl);
-
-    // Assuming the API returns an array of stock data
-    // Map the response data to our Stock interface
-    const stocks: Stock[] = response.data.map((item: any) => ({
-      symbol: item.symbol,
-      name: item.name,
-      price: Number(item.price),
-      volume: Number(item.volume),
-      percent_change: Number(item.percent_change),
-      market_cap: Number(item.market_cap),
-      sector: item.sector,
-    }));
-
-    return stocks;
+    const response = await axios.get<ApiResponse>(url!, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
   } catch (error) {
     if (error instanceof Error) {
+      console.log({ url });
       throw new Error(`Failed to fetch stock data: ${error.message}`);
     }
     throw new Error('Failed to fetch stock data: Unknown error');

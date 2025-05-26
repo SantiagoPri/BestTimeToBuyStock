@@ -10,7 +10,7 @@ const { Pool } = pg;
 const pool = new Pool({
   connectionString: process.env.DB_URL,
   ssl: {
-    rejectUnauthorized: false, // Required for CockroachDB Cloud
+    rejectUnauthorized: false,
   },
 });
 
@@ -18,16 +18,24 @@ export async function initializeDatabase(): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query(`
-      CREATE TABLE IF NOT EXISTS stock_data (
-        symbol TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        price DECIMAL NOT NULL,
-        volume BIGINT NOT NULL,
-        percent_change DECIMAL NOT NULL,
-        market_cap DECIMAL NOT NULL,
-        sector TEXT NOT NULL,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      CREATE TABLE IF NOT EXISTS stock_ratings (
+        id SERIAL PRIMARY KEY,
+        ticker TEXT NOT NULL,
+        target_from TEXT NOT NULL,
+        target_to TEXT NOT NULL,
+        company TEXT NOT NULL,
+        action TEXT NOT NULL,
+        brokerage TEXT NOT NULL,
+        rating_from TEXT NOT NULL,
+        rating_to TEXT NOT NULL,
+        time TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+
+    // Create an index on ticker for faster lookups
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_stock_ratings_ticker ON stock_ratings(ticker)
     `);
   } finally {
     client.release();
@@ -43,19 +51,23 @@ export async function insertStocks(stocks: Stock[]): Promise<void> {
     for (const stock of stocks) {
       await client.query(
         `
-        INSERT INTO stock_data (symbol, name, price, volume, percent_change, market_cap, sector)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        ON CONFLICT (symbol) 
-        DO UPDATE SET 
-          name = EXCLUDED.name,
-          price = EXCLUDED.price,
-          volume = EXCLUDED.volume,
-          percent_change = EXCLUDED.percent_change,
-          market_cap = EXCLUDED.market_cap,
-          sector = EXCLUDED.sector,
-          updated_at = CURRENT_TIMESTAMP
+        INSERT INTO stock_ratings (
+          ticker, target_from, target_to, company, action, 
+          brokerage, rating_from, rating_to, time
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         `,
-        [stock.symbol, stock.name, stock.price, stock.volume, stock.percent_change, stock.market_cap, stock.sector]
+        [
+          stock.ticker,
+          stock.target_from,
+          stock.target_to,
+          stock.company,
+          stock.action,
+          stock.brokerage,
+          stock.rating_from,
+          stock.rating_to,
+          stock.time,
+        ]
       );
     }
 
