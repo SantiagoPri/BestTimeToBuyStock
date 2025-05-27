@@ -4,11 +4,11 @@ import (
 	"log"
 	"net/http"
 
-	"backend/internal/stocks/transport"
+	httpInterface "backend/interfaces/http"
 )
 
 func main() {
-	router := transport.SetupRouter()
+	router := httpInterface.SetupRouter()
 
 	log.Printf("Server starting on :8080")
 	if err := http.ListenAndServe(":8080", router); err != nil {
