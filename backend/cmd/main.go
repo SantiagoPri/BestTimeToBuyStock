@@ -5,13 +5,18 @@ import (
 	"net/http"
 
 	httpInterface "backend/interfaces/http"
+
+	"gorm.io/gorm"
 )
 
 func main() {
-	router := httpInterface.SetupRouter()
+	var db *gorm.DB
+
+	router := httpInterface.NewRouter(db)
+	handler := router.SetupRoutes()
 
 	log.Printf("Server starting on :8080")
-	if err := http.ListenAndServe(":8080", router); err != nil {
+	if err := http.ListenAndServe(":8080", handler); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }
