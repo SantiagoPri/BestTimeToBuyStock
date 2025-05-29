@@ -7,18 +7,22 @@ import (
 	"gorm.io/gorm"
 )
 
+// Compile-time assertion to ensure StockRepository implements stock.Repository
+var _ stock.Repository = (*StockRepository)(nil)
+
 type StockRepository struct {
 	repo repositories.Repository
 }
 
 func NewStockRepository(db *gorm.DB) *StockRepository {
 	return &StockRepository{
-		repo: repositories.NewBaseRepository(db, &stock.Stock{}),
+		repo: repositories.NewBaseRepository(db, &StockEntity{}),
 	}
 }
 
-func (r *StockRepository) Save(s stock.Stock) error {
-	return r.repo.Save(&s)
+func (r *StockRepository) Save(s *stock.Stock) error {
+	entity := FromDomain(s)
+	return r.repo.Save(entity)
 }
 
 func (r *StockRepository) FindAll() ([]stock.Stock, error) {
@@ -31,23 +35,29 @@ func (r *StockRepository) FindAll() ([]stock.Stock, error) {
 }
 
 func (r *StockRepository) DeleteByTicker(ticker string) error {
-	return r.repo.DeleteByField("ticker", ticker, &stock.Stock{})
+	return r.repo.DeleteByField("ticker", ticker, &StockEntity{})
 }
 
 func (r *StockRepository) FindBy(filters map[string]any) (*stock.Stock, error) {
-	var s stock.Stock
-	err := r.repo.FindOneBy(filters, &s)
+	var entity StockEntity
+	err := r.repo.FindOneBy(filters, &entity)
 	if err != nil {
 		return nil, err
 	}
-	return &s, nil
+	return ToDomain(&entity), nil
 }
 
 func (r *StockRepository) FindPaginated(page int, limit int) ([]stock.Stock, int64, error) {
-	var stocks []stock.Stock
-	total, err := r.repo.FindPaginated(&stocks, page, limit)
+	var entities []StockEntity
+	total, err := r.repo.FindPaginated(&entities, page, limit)
 	if err != nil {
 		return nil, 0, err
+	}
+
+	stocks := make([]stock.Stock, len(entities))
+	for i, entity := range entities {
+		domainStock := ToDomain(&entity)
+		stocks[i] = *domainStock
 	}
 	return stocks, total, nil
 }

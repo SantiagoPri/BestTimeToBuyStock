@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 
+	stockApp "backend/application/stock"
+	stockInfra "backend/infrastructure/repositories/stock"
 	httpInterface "backend/interfaces/http"
 
 	"gorm.io/gorm"
@@ -12,7 +14,10 @@ import (
 func main() {
 	var db *gorm.DB
 
-	router := httpInterface.NewRouter(db)
+	stockRepo := stockInfra.NewStockRepository(db)
+	stockService := stockApp.NewStockService(stockRepo)
+	router := httpInterface.NewRouter(stockService)
+
 	handler := router.SetupRoutes()
 
 	log.Printf("Server starting on :8080")

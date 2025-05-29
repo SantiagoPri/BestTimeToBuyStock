@@ -1,13 +1,27 @@
 package http
 
 import (
-	"net/http"
+	"github.com/gin-gonic/gin"
+
+	stock "backend/application/stock"
+	stockHttp "backend/interfaces/http/stock"
 )
 
-func SetupRouter() http.Handler {
-	mux := http.NewServeMux()
+type Router struct {
+	stockService *stock.StockService
+}
 
-	mux.HandleFunc("/ping", PingHandler)
+func NewRouter(stockService *stock.StockService) *Router {
+	return &Router{
+		stockService: stockService,
+	}
+}
 
-	return mux
+func (r *Router) SetupRoutes() *gin.Engine {
+	router := gin.Default()
+
+	stockHandler := stockHttp.NewHandler(r.stockService)
+	stockHttp.RegisterRoutes(router, stockHandler)
+
+	return router
 }
