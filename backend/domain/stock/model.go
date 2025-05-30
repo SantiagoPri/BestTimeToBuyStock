@@ -3,13 +3,9 @@ package stock
 import "time"
 
 type Stock struct {
-	Ticker     string
-	TargetFrom string
-	TargetTo   string
-	Company    string
-	Action     string
-	Brokerage  string
-	RatingFrom string
-	RatingTo   string
-	Time       time.Time
+	ID        uint      `json:"id"`
+	Ticker    string    `json:"ticker"`
+	Company   string    `json:"company"`
+	Category  string    `json:"category"`
+	CreatedAt time.Time `json:"created_at"`
 }

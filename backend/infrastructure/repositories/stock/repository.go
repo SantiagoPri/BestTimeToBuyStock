@@ -26,10 +26,16 @@ func (r *StockRepository) Save(s *stock.Stock) error {
 }
 
 func (r *StockRepository) FindAll() ([]stock.Stock, error) {
-	var stocks []stock.Stock
-	err := r.repo.FindAll(&stocks)
+	var entities []StockEntity
+	err := r.repo.FindAll(&entities)
 	if err != nil {
 		return nil, err
+	}
+
+	stocks := make([]stock.Stock, len(entities))
+	for i, entity := range entities {
+		domainStock := ToDomain(&entity)
+		stocks[i] = *domainStock
 	}
 	return stocks, nil
 }
