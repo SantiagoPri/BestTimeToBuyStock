@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import StockListView from '../../modules/stocks/presentation/StockListView.vue';
+import StockListView from '../../modules/stocks/presentation/views/StockListView.vue';
 
 const routes = [
   {

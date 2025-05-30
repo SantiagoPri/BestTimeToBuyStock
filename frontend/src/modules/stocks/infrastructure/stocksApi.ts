@@ -20,7 +20,7 @@ export const stocksApi = {
       params: {
         page: params.page || 1,
         limit: params.limit || 10,
-        search: params.search,
+        // search: params.search,
       },
     });
     return data;

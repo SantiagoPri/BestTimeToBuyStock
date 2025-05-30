@@ -1,69 +1,85 @@
 import { defineStore } from 'pinia';
-import type { Stock, StockPagination } from '../domain/models/Stock';
-import { stockService } from '../application/fetchStocks';
-import type { GetStocksParams } from '../infrastructure/stocksApi';
+import axios from 'axios';
+
+interface Stock {
+  Ticker: string;
+  Company: string;
+  TargetFrom: string;
+  TargetTo: string;
+  Action: string;
+  Brokerage: string;
+  RatingFrom: string;
+  RatingTo: string;
+  Time: string;
+}
+
+interface StockApiResponse {
+  currentPage: number;
+  limit: number;
+  stocks: Stock[];
+  total: number;
+}
 
 interface StockState {
   stocks: Stock[];
-  selectedStock: Stock | null;
   loading: boolean;
   error: string | null;
   pagination: {
     total: number;
     page: number;
     limit: number;
-    totalPages: number;
   };
 }
 
-export const useStockStore = defineStore('stock', {
+interface GetStocksParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
+export const useStockStore = defineStore('stocks', {
   state: (): StockState => ({
     stocks: [],
-    selectedStock: null,
     loading: false,
     error: null,
     pagination: {
       total: 0,
-      page: 1,
+      page: 0,
       limit: 10,
-      totalPages: 0,
     },
   }),
 
   getters: {
-    isLoading: (state) => state.loading,
-    hasError: (state) => state.error !== null,
+    currentPage: (state) => state.pagination.page,
+    total: (state) => state.pagination.total,
+    limit: (state) => state.pagination.limit,
   },
 
   actions: {
-    async fetchStocks(params: GetStocksParams = {}) {
+    async fetchStocks(page: number) {
       this.loading = true;
       this.error = null;
 
       try {
-        const response = await stockService.fetchStocks(params);
-        this.stocks = response.items;
+        const response = await axios.get<StockApiResponse>(`${import.meta.env.VITE_API_URL}/stocks`, {
+          params: {
+            page,
+            limit: this.pagination.limit,
+          },
+        });
+
+        console.log('API Response:', response.data); // Debug log
+        this.stocks = response.data.stocks || [];
         this.pagination = {
-          total: response.total,
-          page: response.page,
-          limit: response.limit,
-          totalPages: response.totalPages,
+          total: response.data.total,
+          page: response.data.currentPage,
+          limit: response.data.limit,
         };
       } catch (error) {
+        console.error('API Error:', error); // Debug log
         this.error = error instanceof Error ? error.message : 'An error occurred';
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    async fetchStockById(id: string) {
-      this.loading = true;
-      this.error = null;
-
-      try {
-        this.selectedStock = await stockService.fetchStockById(id);
-      } catch (error) {
-        this.error = error instanceof Error ? error.message : 'An error occurred';
+        this.stocks = [];
+        this.pagination.total = 0;
       } finally {
         this.loading = false;
       }
