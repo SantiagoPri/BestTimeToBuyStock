@@ -32,7 +32,14 @@ func (h *Handler) FindAll(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"stocks": stocks, "total": total})
+	c.JSON(http.StatusOK, gin.H{
+		"stocks": stocks,
+		"pagination": gin.H{
+			"total":       total,
+			"currentPage": page,
+			"limit":       limit,
+		},
+	})
 }
 
 func (h *Handler) FindOne(c *gin.Context) {
