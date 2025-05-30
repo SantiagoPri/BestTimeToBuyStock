@@ -17,6 +17,10 @@ type StockEntity struct {
 	Time       time.Time `gorm:"type:timestamp"`
 }
 
+func (StockEntity) TableName() string {
+	return "stock_ratings"
+}
+
 func ToDomain(e *StockEntity) *stock.Stock {
 	if e == nil {
 		return nil

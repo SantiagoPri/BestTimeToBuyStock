@@ -1,0 +1,18 @@
+package database
+
+import (
+	"os"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+)
+
+func Connect() (*gorm.DB, error) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		return nil, ErrMissingDBURL
+	}
+	return gorm.Open(postgres.Open(dsn), &gorm.Config{})
+}
+
+var ErrMissingDBURL = gorm.ErrInvalidDB

@@ -5,14 +5,22 @@ import (
 	"net/http"
 
 	stockApp "backend/application/stock"
+	"backend/infrastructure/database"
 	stockInfra "backend/infrastructure/repositories/stock"
 	httpInterface "backend/interfaces/http"
 
-	"gorm.io/gorm"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	var db *gorm.DB
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: .env file not found")
+	}
+
+	db, err := database.Connect()
+	if err != nil {
+		log.Fatalf("DB connection failed: %v", err)
+	}
 
 	stockRepo := stockInfra.NewStockRepository(db)
 	stockService := stockApp.NewStockService(stockRepo)
