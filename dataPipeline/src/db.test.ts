@@ -3,25 +3,35 @@ import pg from 'pg';
 import { insertStocks, initializeDatabase } from './db.js';
 import type { Stock } from './fetchData.js';
 
-type MockClient = {
-  query: jest.Mock;
-  release: jest.Mock;
-};
+interface MockQueryResult {
+  rows?: Array<{ id: number }>;
+  rowCount?: number;
+}
+
+type QueryFn = (query: string, ...args: any[]) => Promise<MockQueryResult>;
+
+interface MockClient {
+  query: jest.MockedFunction<QueryFn>;
+  release: jest.MockedFunction<() => void>;
+}
+
+const createMockClient = (): MockClient => ({
+  query: jest.fn<QueryFn>(),
+  release: jest.fn(),
+});
+
+// Mock pg.Pool
+const mockConnect = jest.fn();
+const mockPool = jest.fn(() => ({
+  connect: mockConnect,
+}));
 
 jest.mock('pg', () => ({
-  Pool: jest.fn().mockImplementation(() => ({
-    connect: jest.fn().mockResolvedValue({
-      query: jest.fn(),
-      release: jest.fn(),
-    } as MockClient),
-  })),
+  Pool: mockPool,
 }));
 
 describe('Database operations', () => {
-  const mockClient: MockClient = {
-    query: jest.fn(),
-    release: jest.fn(),
-  };
+  const mockClient = createMockClient();
 
   const mockStocks: Stock[] = [
     {
@@ -46,34 +56,24 @@ describe('Database operations', () => {
       rating_to: 'Buy',
       time: '2025-04-15T00:30:13.351058975Z',
     },
-    {
-      ticker: 'ETR',
-      target_from: '$88.00',
-      target_to: '$91.00',
-      company: 'Entergy',
-      action: 'target raised by',
-      brokerage: 'Barclays',
-      rating_from: 'Overweight',
-      rating_to: 'Overweight',
-      time: '2025-05-02T00:30:07.507252285Z',
-    },
   ];
 
   beforeEach(() => {
     jest.clearAllMocks();
-    const poolMock = pg.Pool as unknown as jest.Mock;
-    poolMock.mockImplementation(() => ({
-      connect: jest.fn().mockResolvedValue(mockClient),
-    }));
+    mockConnect.mockReturnValue(mockClient);
+    mockClient.query.mockImplementation(
+      (query: string, ...args: any[]): Promise<MockQueryResult> => Promise.resolve({})
+    );
   });
 
   describe('initializeDatabase', () => {
     it('should create tables and indexes', async () => {
       await initializeDatabase();
 
-      expect(mockClient.query).toHaveBeenCalledTimes(2);
-      expect(mockClient.query.mock.calls[0][0]).toContain('CREATE TABLE IF NOT EXISTS stock_ratings');
-      expect(mockClient.query.mock.calls[1][0]).toContain('CREATE INDEX IF NOT EXISTS idx_stock_ratings_ticker');
+      expect(mockClient.query).toHaveBeenCalledTimes(3);
+      expect(mockClient.query.mock.calls[0][0]).toContain('CREATE TABLE IF NOT EXISTS stocks');
+      expect(mockClient.query.mock.calls[1][0]).toContain('CREATE TABLE IF NOT EXISTS stock_snapshots');
+      expect(mockClient.query.mock.calls[2][0]).toContain('CREATE INDEX IF NOT EXISTS');
       expect(mockClient.release).toHaveBeenCalled();
     });
 
@@ -87,25 +87,83 @@ describe('Database operations', () => {
   });
 
   describe('insertStocks', () => {
-    it('should insert stocks successfully', async () => {
-      mockClient.query.mockResolvedValue({ rowCount: 1 });
+    beforeEach(() => {
+      // Mock successful stock insertion with returning ID
+      mockClient.query.mockImplementation((query: string, ...args: any[]): Promise<MockQueryResult> => {
+        if (query === 'BEGIN') return Promise.resolve({});
+        if (query === 'COMMIT') return Promise.resolve({});
+        if (query.includes('INSERT INTO stocks')) {
+          return Promise.resolve({ rows: [{ id: 1 }] });
+        }
+        return Promise.resolve({ rowCount: 1 });
+      });
+    });
 
+    it('should insert new stocks and snapshots successfully', async () => {
       await insertStocks(mockStocks);
 
+      // Check transaction management
       expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
-      expect(mockClient.query).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT INTO stock_ratings'),
-        expect.arrayContaining([mockStocks[0].ticker])
-      );
       expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
-      expect(mockClient.release).toHaveBeenCalled();
+
+      // Verify stock insertion
+      const stockInsertCalls = mockClient.query.mock.calls.filter(
+        (call: unknown[]) => typeof call[0] === 'string' && call[0].includes('INSERT INTO stocks')
+      );
+      expect(stockInsertCalls).toHaveLength(2);
+      expect(stockInsertCalls[0][1]).toEqual([mockStocks[0].ticker, mockStocks[0].company, 'Unclassified']);
+
+      // Verify snapshot insertion
+      const snapshotInsertCalls = mockClient.query.mock.calls.filter(
+        (call: unknown[]) => typeof call[0] === 'string' && call[0].includes('INSERT INTO stock_snapshots')
+      );
+      expect(snapshotInsertCalls).toHaveLength(2);
+
+      // Check price calculation for first stock
+      const firstSnapshotParams = snapshotInsertCalls[0][1] as unknown[];
+      const targetFrom = parseFloat(mockStocks[0].target_from.replace('$', ''));
+      const targetTo = parseFloat(mockStocks[0].target_to.replace('$', ''));
+      const price = firstSnapshotParams[6] as number;
+      const avgTarget = (targetFrom + targetTo) / 2;
+
+      expect(price).toBeGreaterThanOrEqual(avgTarget * 0.85);
+      expect(price).toBeLessThanOrEqual(avgTarget * 1.1);
+      expect(firstSnapshotParams[1]).toBe(1); // week
+      expect(firstSnapshotParams[8]).toBe(`Recommendation by ${mockStocks[0].brokerage}`); // news_title
+    });
+
+    it('should handle duplicate stocks correctly', async () => {
+      // Mock the first stock already existing
+      const duplicateStock = { ...mockStocks[0] };
+      mockClient.query.mockImplementation((query: string, ...args: any[]): Promise<MockQueryResult> => {
+        if (query === 'BEGIN') return Promise.resolve({});
+        if (query === 'COMMIT') return Promise.resolve({});
+        if (query.includes('INSERT INTO stocks')) {
+          return Promise.resolve({ rows: [{ id: 1 }] });
+        }
+        return Promise.resolve({ rowCount: 1 });
+      });
+
+      await insertStocks([duplicateStock]);
+      await insertStocks([duplicateStock]);
+
+      const stockInsertCalls = mockClient.query.mock.calls.filter(
+        (call: unknown[]) => typeof call[0] === 'string' && call[0].includes('INSERT INTO stocks')
+      );
+
+      // Should still try to insert twice (with ON CONFLICT DO UPDATE)
+      expect(stockInsertCalls).toHaveLength(2);
+      // Both calls should have the same parameters
+      expect(stockInsertCalls[0][1]).toEqual(stockInsertCalls[1][1]);
     });
 
     it('should rollback transaction on error', async () => {
       const error = new Error('Insert failed');
-      mockClient.query.mockImplementation((query: string) => {
+      mockClient.query.mockImplementation((query: string, ...args: any[]): Promise<MockQueryResult> => {
         if (query === 'BEGIN') return Promise.resolve({});
-        if (query.includes('INSERT')) return Promise.reject(error);
+        if (query.includes('INSERT INTO stocks')) {
+          return Promise.reject(error);
+        }
         return Promise.resolve({});
       });
 

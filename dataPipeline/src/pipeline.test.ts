@@ -8,6 +8,16 @@ jest.mock('./fetchData.js');
 jest.mock('./db.js');
 jest.mock('timers/promises');
 
+interface ApiResponse {
+  items: Stock[];
+  next_page: string | null;
+}
+
+type FetchStockDataFn = typeof fetchStockData;
+type InitializeDatabaseFn = typeof initializeDatabase;
+type InsertStocksFn = typeof insertStocks;
+type SetTimeoutFn = typeof setTimeout;
+
 describe('Pipeline', () => {
   const mockStocks: Stock[] = [
     {
@@ -36,45 +46,53 @@ describe('Pipeline', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (fetchStockData as unknown as jest.Mock).mockReset();
-    (initializeDatabase as unknown as jest.Mock).mockReset();
-    (insertStocks as unknown as jest.Mock).mockReset();
-    (setTimeout as unknown as jest.Mock).mockReset();
+    (fetchStockData as jest.MockedFunction<FetchStockDataFn>).mockReset();
+    (initializeDatabase as jest.MockedFunction<InitializeDatabaseFn>).mockReset();
+    (insertStocks as jest.MockedFunction<InsertStocksFn>).mockReset();
+    (setTimeout as jest.MockedFunction<SetTimeoutFn>).mockReset();
   });
 
   it('should process all pages of stock data', async () => {
     // Mock first page with next_page token
-    (fetchStockData as unknown as jest.Mock).mockResolvedValueOnce({
+    const mockFetchStockData = fetchStockData as jest.MockedFunction<FetchStockDataFn>;
+    mockFetchStockData.mockResolvedValueOnce({
       items: mockStocks.slice(0, 1),
       next_page: 'page2',
     });
 
     // Mock second page with no next_page token
-    (fetchStockData as unknown as jest.Mock).mockResolvedValueOnce({
+    mockFetchStockData.mockResolvedValueOnce({
       items: mockStocks.slice(1),
       next_page: null,
     });
 
-    (initializeDatabase as unknown as jest.Mock).mockResolvedValue(undefined);
-    (insertStocks as unknown as jest.Mock).mockResolvedValue(undefined);
-    (setTimeout as unknown as jest.Mock).mockResolvedValue(undefined);
+    const mockInitializeDatabase = initializeDatabase as jest.MockedFunction<InitializeDatabaseFn>;
+    const mockInsertStocks = insertStocks as jest.MockedFunction<InsertStocksFn>;
+    const mockSetTimeout = setTimeout as jest.MockedFunction<SetTimeoutFn>;
+
+    mockInitializeDatabase.mockResolvedValue(undefined);
+    mockInsertStocks.mockResolvedValue(undefined);
+    mockSetTimeout.mockResolvedValue(undefined);
 
     // Import the runPipeline function dynamically to avoid hoisting issues with mocks
     const { runPipeline } = await import('./pipeline.js');
     await runPipeline();
 
-    expect(initializeDatabase).toHaveBeenCalledTimes(1);
-    expect(fetchStockData).toHaveBeenCalledTimes(2);
-    expect(fetchStockData).toHaveBeenNthCalledWith(1, undefined);
-    expect(fetchStockData).toHaveBeenNthCalledWith(2, 'page2');
-    expect(insertStocks).toHaveBeenCalledTimes(2);
-    expect(setTimeout).toHaveBeenCalledWith(1000);
+    expect(mockInitializeDatabase).toHaveBeenCalledTimes(1);
+    expect(mockFetchStockData).toHaveBeenCalledTimes(2);
+    expect(mockFetchStockData).toHaveBeenNthCalledWith(1, undefined);
+    expect(mockFetchStockData).toHaveBeenNthCalledWith(2, 'page2');
+    expect(mockInsertStocks).toHaveBeenCalledTimes(2);
+    expect(mockSetTimeout).toHaveBeenCalledWith(1000);
   });
 
   it('should handle API errors', async () => {
     const error = new Error('API error');
-    (fetchStockData as unknown as jest.Mock).mockRejectedValue(error);
-    (initializeDatabase as unknown as jest.Mock).mockResolvedValue(undefined);
+    const mockFetchStockData = fetchStockData as jest.MockedFunction<FetchStockDataFn>;
+    const mockInitializeDatabase = initializeDatabase as jest.MockedFunction<InitializeDatabaseFn>;
+
+    mockFetchStockData.mockRejectedValue(error);
+    mockInitializeDatabase.mockResolvedValue(undefined);
 
     const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
     const mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -91,11 +109,14 @@ describe('Pipeline', () => {
 
   it('should handle database errors', async () => {
     const error = new Error('Database error');
-    (fetchStockData as unknown as jest.Mock).mockResolvedValue({
+    const mockFetchStockData = fetchStockData as jest.MockedFunction<FetchStockDataFn>;
+    const mockInitializeDatabase = initializeDatabase as jest.MockedFunction<InitializeDatabaseFn>;
+
+    mockFetchStockData.mockResolvedValue({
       items: mockStocks,
       next_page: null,
     });
-    (initializeDatabase as unknown as jest.Mock).mockRejectedValue(error);
+    mockInitializeDatabase.mockRejectedValue(error);
 
     const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
     const mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
