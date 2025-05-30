@@ -14,6 +14,7 @@ func (s *StockService) FindPaginated(page, limit int) ([]stock.Stock, int64, err
 	return s.repo.FindPaginated(page, limit)
 }
 
-func (s *StockService) FindOne(filters map[string]any) (*stock.Stock, error) {
+func (s *StockService) FindOne(field string, value any) (*stock.Stock, error) {
+	filters := map[string]any{field: value}
 	return s.repo.FindBy(filters)
 }

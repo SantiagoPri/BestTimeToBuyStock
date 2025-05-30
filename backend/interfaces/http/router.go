@@ -1,6 +1,7 @@
 package http
 
 import (
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	stock "backend/application/stock"
@@ -19,6 +20,9 @@ func NewRouter(stockService *stock.StockService) *Router {
 
 func (r *Router) SetupRoutes() *gin.Engine {
 	router := gin.Default()
+
+	// Apply CORS middleware
+	router.Use(cors.Default())
 
 	stockHandler := stockHttp.NewHandler(r.stockService)
 	stockHttp.RegisterRoutes(router, stockHandler)
