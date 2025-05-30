@@ -33,12 +33,10 @@ func (h *Handler) FindAll(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"stocks": stocks,
-		"pagination": gin.H{
-			"total":       total,
-			"currentPage": page,
-			"limit":       limit,
-		},
+		"stocks":      stocks,
+		"total":       total,
+		"currentPage": page,
+		"limit":       limit,
 	})
 }
 
