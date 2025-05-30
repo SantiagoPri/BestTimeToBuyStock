@@ -6,11 +6,11 @@ import (
 )
 
 type StockEntity struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	Ticker    string    `gorm:"type:varchar(10)" json:"ticker"`
-	Company   string    `gorm:"type:varchar(100)" json:"company"`
-	Category  string    `gorm:"type:varchar(50)" json:"category"`
-	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+	ID        uint      `gorm:"column:id;primaryKey" json:"id"`
+	Ticker    string    `gorm:"column:ticker;type:varchar(10)" json:"ticker"`
+	Company   string    `gorm:"column:company;type:varchar(100)" json:"company"`
+	Category  string    `gorm:"column:category;type:varchar(50)" json:"category"`
+	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime" json:"created_at"`
 }
 
 func (StockEntity) TableName() string {
