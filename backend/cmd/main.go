@@ -4,9 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	stockApp "backend/application/stock"
 	"backend/infrastructure/database"
-	stockInfra "backend/infrastructure/repositories/stock"
 	httpInterface "backend/interfaces/http"
 
 	"github.com/joho/godotenv"
@@ -22,9 +20,12 @@ func main() {
 		log.Fatalf("DB connection failed: %v", err)
 	}
 
-	stockRepo := stockInfra.NewStockRepository(db)
-	stockService := stockApp.NewStockService(stockRepo)
-	router := httpInterface.NewRouter(stockService)
+	container := NewContainer(db)
+	router := httpInterface.NewRouter(
+		container.StockService,
+		container.CategoryService,
+		container.SnapshotService,
+	)
 
 	handler := router.SetupRoutes()
 

@@ -52,3 +52,18 @@ func (r *CategoryRepository) FindBy(filters map[string]any) (*category.Category,
 	}
 	return ToDomain(&entity), nil
 }
+
+func (r *CategoryRepository) FindPaginated(page int, limit int) ([]category.Category, int64, error) {
+	var entities []CategoryEntity
+	total, err := r.repo.FindPaginated(&entities, page, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	categories := make([]category.Category, len(entities))
+	for i, entity := range entities {
+		domainCategory := ToDomain(&entity)
+		categories[i] = *domainCategory
+	}
+	return categories, total, nil
+}

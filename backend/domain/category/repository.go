@@ -5,4 +5,5 @@ type Repository interface {
 	FindAll() ([]Category, error)
 	FindBy(filters map[string]any) (*Category, error)
 	DeleteByName(name string) error
+	FindPaginated(page int, limit int) ([]Category, int64, error)
 }

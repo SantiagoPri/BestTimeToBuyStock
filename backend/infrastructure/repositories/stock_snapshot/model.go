@@ -3,12 +3,13 @@ package stock_snapshot
 import (
 	"backend/domain/stock_snapshot"
 	stockRepo "backend/infrastructure/repositories/stock"
+	"strconv"
 	"time"
 )
 
 type StockSnapshotEntity struct {
 	ID          uint                  `gorm:"column:id;primaryKey" json:"id"`
-	StockID     uint                  `gorm:"column:stock_id;not null" json:"stock_id"`
+	StockID     uint                  `gorm:"column:stock_id;not null;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT" json:"stock_id"`
 	Week        uint                  `gorm:"column:week;not null" json:"week"`
 	RatingFrom  string                `gorm:"column:rating_from;type:varchar(20)" json:"rating_from"`
 	RatingTo    string                `gorm:"column:rating_to;type:varchar(20)" json:"rating_to"`
@@ -19,7 +20,7 @@ type StockSnapshotEntity struct {
 	NewsTitle   string                `gorm:"column:news_title;type:varchar(200)" json:"news_title"`
 	NewsSummary string                `gorm:"column:news_summary;type:text" json:"news_summary"`
 	CreatedAt   time.Time             `gorm:"column:created_at;autoCreateTime" json:"created_at"`
-	Stock       stockRepo.StockEntity `gorm:"foreignKey:stock_id" json:"stock"`
+	Stock       stockRepo.StockEntity `gorm:"foreignKey:StockID;references:ID" json:"stock"`
 }
 
 func (StockSnapshotEntity) TableName() string {
@@ -31,7 +32,7 @@ func ToDomain(e *StockSnapshotEntity) *stock_snapshot.StockSnapshot {
 		return nil
 	}
 	return &stock_snapshot.StockSnapshot{
-		ID:          e.ID,
+		ID:          strconv.FormatUint(uint64(e.ID), 10),
 		Week:        e.Week,
 		RatingFrom:  e.RatingFrom,
 		RatingTo:    e.RatingTo,
@@ -50,9 +51,14 @@ func FromDomain(s *stock_snapshot.StockSnapshot) *StockSnapshotEntity {
 	if s == nil {
 		return nil
 	}
+	id, err := strconv.ParseUint(s.ID, 10, 64)
+	if err != nil {
+		id = 0 // For create operations
+	}
+	stockEntity := stockRepo.FromDomain(&s.Stock)
 	return &StockSnapshotEntity{
-		ID:          s.ID,
-		StockID:     s.Stock.ID,
+		ID:          uint(id),
+		StockID:     stockEntity.ID,
 		Week:        s.Week,
 		RatingFrom:  s.RatingFrom,
 		RatingTo:    s.RatingTo,
@@ -63,6 +69,6 @@ func FromDomain(s *stock_snapshot.StockSnapshot) *StockSnapshotEntity {
 		NewsTitle:   s.NewsTitle,
 		NewsSummary: s.NewsSummary,
 		CreatedAt:   s.CreatedAt,
-		Stock:       *stockRepo.FromDomain(&s.Stock),
+		Stock:       *stockEntity,
 	}
 }

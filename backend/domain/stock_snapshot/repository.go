@@ -5,4 +5,5 @@ type Repository interface {
 	FindAll() ([]StockSnapshot, error)
 	FindBy(filters map[string]any) (*StockSnapshot, error)
 	FindByCategory(category string) ([]StockSnapshot, error)
+	FindPaginated(page int, limit int) ([]StockSnapshot, int64, error)
 }

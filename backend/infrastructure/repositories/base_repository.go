@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"strconv"
+
 	"gorm.io/gorm"
 )
 
@@ -23,6 +25,32 @@ func NewBaseRepository(db *gorm.DB, model any) *BaseRepository {
 		db:    db,
 		model: model,
 	}
+}
+
+// ParseIDFilter converts string IDs in filters to uint for GORM queries
+func ParseIDFilter(filters map[string]any, idFields ...string) map[string]any {
+	result := make(map[string]any)
+	for k, v := range filters {
+		if strVal, ok := v.(string); ok {
+			// Check if this is an ID field that needs conversion
+			for _, idField := range idFields {
+				if k == idField {
+					if id, err := strconv.ParseUint(strVal, 10, 64); err == nil {
+						result[k] = uint(id)
+					} else {
+						result[k] = 0 // Default for invalid ID
+					}
+					break
+				}
+			}
+			if _, exists := result[k]; !exists {
+				result[k] = v // Keep original value if not an ID field
+			}
+		} else {
+			result[k] = v // Keep non-string values as is
+		}
+	}
+	return result
 }
 
 func (r *BaseRepository) Save(entity any) error {
