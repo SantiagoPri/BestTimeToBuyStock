@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "populateData": "node dist/pipeline.js",
+    "categorizeStocks": "node dist/categorizeStocks.js",
+    "simulateStocks": "node dist/simulateStocks.js",
     "build": "tsc",
     "test": "jest"
   },
