@@ -41,7 +41,8 @@ func (s *service) Create(username string) (string, error) {
 		Username:  username,
 		Cash:      10000.00,
 		Status:    game_session.StatusStarting,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().Format(time.RFC3339),
+		UpdatedAt: time.Now().Format(time.RFC3339),
 	}
 
 	if err := s.repo.Save(session); err != nil {

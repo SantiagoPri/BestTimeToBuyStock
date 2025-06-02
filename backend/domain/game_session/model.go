@@ -1,9 +1,5 @@
 package game_session
 
-import (
-	"time"
-)
-
 type GameSessionStatus string
 
 const (
@@ -25,10 +21,22 @@ func (s GameSessionStatus) IsFinished() bool {
 	return s == StatusFinished || s == StatusExpired
 }
 
+type HoldingInfo struct {
+	Quantity   int     `json:"quantity"`
+	TotalSpent float64 `json:"total_spent"`
+}
+
+type SessionMetadata struct {
+	Holdings map[string]HoldingInfo `json:"holdings"`
+}
+
 type GameSession struct {
-	SessionID string
-	Username  string
-	Cash      float64
-	Status    GameSessionStatus
-	CreatedAt time.Time
+	ID        int64             `json:"id"`
+	SessionID string            `json:"session_id"`
+	Username  string            `json:"username"`
+	Cash      float64           `json:"cash"`
+	Status    GameSessionStatus `json:"status"`
+	CreatedAt string            `json:"created_at"`
+	UpdatedAt string            `json:"updated_at"`
+	Metadata  *SessionMetadata  `json:"metadata,omitempty"`
 }
