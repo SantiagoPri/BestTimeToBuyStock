@@ -25,6 +25,7 @@ func main() {
 		container.StockService,
 		container.CategoryService,
 		container.SnapshotService,
+		container.GameSessionService,
 	)
 
 	handler := router.SetupRoutes()

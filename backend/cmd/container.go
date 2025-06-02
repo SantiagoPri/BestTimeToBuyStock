@@ -4,17 +4,20 @@ import (
 	"gorm.io/gorm"
 
 	categoryApp "backend/application/category"
+	gameSessionApp "backend/application/game_session"
 	stockApp "backend/application/stock"
 	snapshotApp "backend/application/stock_snapshot"
 	categoryRepo "backend/infrastructure/repositories/category"
+	gameSessionRepo "backend/infrastructure/repositories/game_session"
 	stockRepo "backend/infrastructure/repositories/stock"
 	snapshotRepo "backend/infrastructure/repositories/stock_snapshot"
 )
 
 type Container struct {
-	StockService    *stockApp.StockService
-	CategoryService *categoryApp.CategoryService
-	SnapshotService *snapshotApp.StockSnapshotService
+	StockService       *stockApp.StockService
+	CategoryService    *categoryApp.CategoryService
+	SnapshotService    *snapshotApp.StockSnapshotService
+	GameSessionService gameSessionApp.Service
 }
 
 func NewContainer(db *gorm.DB) *Container {
@@ -27,9 +30,13 @@ func NewContainer(db *gorm.DB) *Container {
 	snapshotRepo := snapshotRepo.NewStockSnapshotRepository(db)
 	snapshotService := snapshotApp.NewStockSnapshotService(snapshotRepo)
 
+	gameSessionRepo := gameSessionRepo.NewRepository(db)
+	gameSessionService := gameSessionApp.NewService(gameSessionRepo)
+
 	return &Container{
-		StockService:    stockService,
-		CategoryService: categoryService,
-		SnapshotService: snapshotService,
+		StockService:       stockService,
+		CategoryService:    categoryService,
+		SnapshotService:    snapshotService,
+		GameSessionService: gameSessionService,
 	}
 }
