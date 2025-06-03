@@ -31,7 +31,6 @@ type SessionMetadata struct {
 }
 
 type GameSession struct {
-	ID        int64             `json:"id"`
 	SessionID string            `json:"session_id"`
 	Username  string            `json:"username"`
 	Cash      float64           `json:"cash"`

@@ -6,8 +6,7 @@ import (
 )
 
 type GameSessionEntity struct {
-	ID        int64     `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
-	SessionID string    `gorm:"column:session_id;uniqueIndex;type:varchar(64)" json:"session_id"`
+	SessionID string    `gorm:"column:session_id;primaryKey;type:varchar(64)" json:"session_id"`
 	Username  string    `gorm:"column:username;type:varchar(100);not null" json:"username"`
 	Cash      float64   `gorm:"column:cash;type:decimal(15,2);default:10000.00" json:"cash"`
 	Status    string    `gorm:"column:status;type:varchar(20);default:'starting'" json:"status"`
@@ -24,7 +23,6 @@ func ToDomain(e *GameSessionEntity) *game_session.GameSession {
 		return nil
 	}
 	return &game_session.GameSession{
-		ID:        e.ID,
 		SessionID: e.SessionID,
 		Username:  e.Username,
 		Cash:      e.Cash,
@@ -39,7 +37,6 @@ func FromDomain(s *game_session.GameSession) *GameSessionEntity {
 		return nil
 	}
 	return &GameSessionEntity{
-		ID:        s.ID,
 		SessionID: s.SessionID,
 		Username:  s.Username,
 		Cash:      s.Cash,

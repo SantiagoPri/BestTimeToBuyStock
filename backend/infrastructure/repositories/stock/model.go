@@ -22,7 +22,7 @@ type StockEntity struct {
 }
 
 func (StockEntity) TableName() string {
-	return "stocks_ratings"
+	return "stock_ratings"
 }
 
 func ToDomain(e *StockEntity) *stock.Stock {

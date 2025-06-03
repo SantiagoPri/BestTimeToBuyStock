@@ -17,7 +17,8 @@ func NewHandler(service game_session.Service) *Handler {
 }
 
 type createSessionRequest struct {
-	Username string `json:"username" binding:"required"`
+	Username   string   `json:"username" binding:"required"`
+	Categories []string `json:"categories" binding:"required,len=3"`
 }
 
 type createSessionResponse struct {
@@ -36,7 +37,7 @@ func (h *Handler) CreateSession(c *gin.Context) {
 		return
 	}
 
-	sessionID, err := h.service.Create(req.Username)
+	sessionID, err := h.service.Create(req.Username, req.Categories)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

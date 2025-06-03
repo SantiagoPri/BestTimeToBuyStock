@@ -33,7 +33,7 @@ func NewContainer(db *gorm.DB) *Container {
 
 	redisService := redis.NewRedisService()
 	gameSessionRepo := gameSessionRepo.NewRepository(db, redisService)
-	gameSessionService := gameSessionApp.NewService(gameSessionRepo)
+	gameSessionService := gameSessionApp.NewService(gameSessionRepo, stockRepo)
 
 	return &Container{
 		StockService:       stockService,
