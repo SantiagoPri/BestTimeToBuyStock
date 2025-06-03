@@ -13,6 +13,7 @@ type Repository interface {
 	DeleteByField(field string, value any, model any) error
 	FindOneBy(filters map[string]any, out any) error
 	FindPaginated(out any, page int, limit int) (int64, error)
+	FindRandomByField(field string, value any, limit int, out any) error
 }
 
 type BaseRepository struct {
@@ -94,4 +95,8 @@ func (r *BaseRepository) FindPaginated(out any, page int, limit int) (int64, err
 	}
 
 	return total, nil
+}
+
+func (r *BaseRepository) FindRandomByField(field string, value any, limit int, out any) error {
+	return r.db.Where(field+" = ?", value).Order("RANDOM()").Limit(limit).Find(out).Error
 }

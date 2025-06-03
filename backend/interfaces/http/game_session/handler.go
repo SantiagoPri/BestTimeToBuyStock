@@ -2,7 +2,6 @@ package game_session
 
 import (
 	"backend/application/game_session"
-	domainSession "backend/domain/game_session"
 	"net/http"
 	"strings"
 
@@ -60,28 +59,6 @@ func (h *Handler) GetSessionState(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, state)
-}
-
-func (h *Handler) UpdateSessionState(c *gin.Context) {
-	sessionID := extractBearerToken(c)
-	if sessionID == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid session token"})
-		return
-	}
-
-	var req updateStateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	err := h.service.UpdateState(sessionID, domainSession.GameSessionStatus(req.Status), req.Cash)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.Status(http.StatusOK)
 }
 
 func (h *Handler) GetLeaderboard(c *gin.Context) {

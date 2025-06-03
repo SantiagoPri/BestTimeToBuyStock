@@ -4,6 +4,7 @@ import (
 	"backend/domain/game_session"
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"backend/infrastructure/redis"
@@ -25,7 +26,17 @@ func NewRepository(db *gorm.DB, redisService redis.RedisService) game_session.Re
 
 func (r *repository) Save(session *game_session.GameSession) error {
 	entity := FromDomain(session)
-	return r.db.Create(entity).Error
+	if err := r.db.Create(entity).Error; err != nil {
+		return fmt.Errorf("failed to save session: %w", err)
+	}
+	redisKey := fmt.Sprintf("session:%s:metadata", session.SessionID)
+	ctx := context.Background()
+
+	if err := r.redisService.Set(ctx, redisKey, session.Metadata, 2*time.Hour); err != nil {
+		return fmt.Errorf("failed to save session metadata: %w", err)
+	}
+
+	return nil
 }
 
 func (r *repository) FindBySessionID(sessionID string) (*game_session.GameSession, error) {
@@ -36,36 +47,23 @@ func (r *repository) FindBySessionID(sessionID string) (*game_session.GameSessio
 
 	session := ToDomain(&entity)
 
-	// Only fetch metadata for active sessions
-	if session.Status != game_session.StatusFinished && session.Status != game_session.StatusExpired {
-		var metadata game_session.SessionMetadata
-		redisKey := fmt.Sprintf("session:%s:metadata", sessionID)
-
-		if err := r.redisService.Get(context.Background(), redisKey, &metadata); err == nil {
-			session.Metadata = &metadata
-		}
+	if session.Status.IsFinished() {
+		return nil, fmt.Errorf("session %s is no longer active", sessionID)
 	}
 
+	var metadata game_session.SessionMetadata
+	redisKey := fmt.Sprintf("session:%s:metadata", sessionID)
+	if err := r.redisService.Get(context.Background(), redisKey, &metadata); err != nil {
+		// If Redis data not found, mark session as expired
+		session.Status = game_session.StatusExpired
+		if err := r.db.Model(&GameSessionEntity{}).Where("session_id = ?", session.SessionID).Update("status", session.Status).Error; err != nil {
+			return nil, fmt.Errorf("failed to update expired session status: %w", err)
+		}
+		return nil, fmt.Errorf("session %s has expired", sessionID)
+	}
+
+	session.Metadata = &metadata
 	return session, nil
-}
-
-func (r *repository) Update(session *game_session.GameSession) error {
-	// Update database fields
-	entity := FromDomain(session)
-	if err := r.db.Save(entity).Error; err != nil {
-		return err
-	}
-
-	if session.Metadata != nil && session.Status != game_session.StatusFinished && session.Status != game_session.StatusExpired {
-		redisKey := fmt.Sprintf("session:%s:metadata", session.SessionID)
-		ctx := context.Background()
-
-		if err := r.redisService.Set(ctx, redisKey, session.Metadata, 2*time.Hour); err != nil {
-			return fmt.Errorf("failed to update session metadata: %w", err)
-		}
-	}
-
-	return nil
 }
 
 func (r *repository) FindLeaderboardTop10(page, pageSize int) ([]game_session.GameSession, error) {
@@ -85,4 +83,41 @@ func (r *repository) FindLeaderboardTop10(page, pageSize int) ([]game_session.Ga
 		sessions[i] = *ToDomain(&entity)
 	}
 	return sessions, nil
+}
+
+func (r *repository) BeginTransaction(sessionID string) (game_session.GameSessionTx, error) {
+	// Begin a database transaction
+	tx := r.db.Begin()
+	if tx.Error != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", tx.Error)
+	}
+
+	// Lock and fetch the session with status check
+	var entity GameSessionEntity
+	if err := tx.Set("gorm:for_update", true).
+		Where("session_id = ? AND status NOT IN (?)", sessionID, []game_session.GameSessionStatus{game_session.StatusFinished, game_session.StatusExpired}).
+		First(&entity).Error; err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("failed to find active session: %w", err)
+	}
+
+	session := ToDomain(&entity)
+
+	var metadata game_session.SessionMetadata
+	redisKey := fmt.Sprintf("session:%s:metadata", sessionID)
+	if err := r.redisService.Get(context.Background(), redisKey, &metadata); err != nil {
+		session.Status = game_session.StatusExpired
+		if err := r.db.Model(&GameSessionEntity{}).Where("session_id = ?", session.SessionID).Update("status", session.Status).Error; err != nil {
+			log.Printf("failed to update expired session status: %v", err)
+		}
+		tx.Rollback()
+		return nil, fmt.Errorf("failed to get session metadata: %w", err)
+	}
+
+	session.Metadata = &metadata
+	return &gameSessionTx{
+		tx:           tx,
+		redisService: r.redisService,
+		session:      session,
+	}, nil
 }

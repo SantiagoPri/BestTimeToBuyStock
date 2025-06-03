@@ -10,7 +10,6 @@ import (
 type Service interface {
 	Create(username string) (string, error)
 	GetState(sessionID string) (*game_session.GameSession, error)
-	UpdateState(sessionID string, newStatus game_session.GameSessionStatus, newCash float64) error
 	GetLeaderboard() ([]game_session.GameSession, error)
 }
 
@@ -54,18 +53,6 @@ func (s *service) Create(username string) (string, error) {
 
 func (s *service) GetState(sessionID string) (*game_session.GameSession, error) {
 	return s.repo.FindBySessionID(sessionID)
-}
-
-func (s *service) UpdateState(sessionID string, newStatus game_session.GameSessionStatus, newCash float64) error {
-	session, err := s.repo.FindBySessionID(sessionID)
-	if err != nil {
-		return err
-	}
-
-	session.Status = newStatus
-	session.Cash = newCash
-
-	return s.repo.Update(session)
 }
 
 func (s *service) GetLeaderboard() ([]game_session.GameSession, error) {

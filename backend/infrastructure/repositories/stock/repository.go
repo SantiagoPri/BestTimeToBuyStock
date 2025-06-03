@@ -4,6 +4,8 @@ import (
 	"backend/domain/stock"
 	"backend/infrastructure/repositories"
 
+	"fmt"
+
 	"gorm.io/gorm"
 )
 
@@ -66,4 +68,27 @@ func (r *StockRepository) FindPaginated(page int, limit int) ([]stock.Stock, int
 		stocks[i] = *domainStock
 	}
 	return stocks, total, nil
+}
+
+func (r *StockRepository) PickStocksForSession(categories []string) ([]stock.Stock, error) {
+	if len(categories) != 3 {
+		return nil, fmt.Errorf("exactly 3 categories required, got %d", len(categories))
+	}
+
+	result := make([]stock.Stock, 0, 12)
+
+	for _, category := range categories {
+		var entities []StockEntity
+		err := r.repo.FindRandomByField("category", category, 4, &entities)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching stocks for category %s: %w", category, err)
+		}
+
+		for _, entity := range entities {
+			domainStock := ToDomain(&entity)
+			result = append(result, *domainStock)
+		}
+	}
+
+	return result, nil
 }
