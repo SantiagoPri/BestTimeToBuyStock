@@ -2,7 +2,9 @@ package game_session
 
 import (
 	"backend/domain/game_session"
+	"backend/domain/gm_session"
 	"backend/domain/stock"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -19,12 +21,14 @@ type Service interface {
 type service struct {
 	repo      game_session.Repository
 	stockRepo stock.Repository
+	aiModel   gm_session.AI
 }
 
-func NewService(repo game_session.Repository, stockRepo stock.Repository) Service {
+func NewService(repo game_session.Repository, stockRepo stock.Repository, aiModel gm_session.AI) Service {
 	return &service{
 		repo:      repo,
 		stockRepo: stockRepo,
+		aiModel:   aiModel,
 	}
 }
 
@@ -56,8 +60,12 @@ func (s *service) Create(username string, categories []string) (string, error) {
 		return "", fmt.Errorf("failed to pick stocks: %w", err)
 	}
 
-	// Log picked stocks for debugging
-	log.Printf("Picked stocks for session %s: %+v", sessionID, stocks)
+	gmData, err := s.aiModel.GetGMResponse(context.Background(), categories, stocks)
+	if err != nil {
+		return "", fmt.Errorf("failed to get GM response: %w", err)
+	}
+
+	log.Printf("GM Response for session %s: %+v", sessionID, gmData)
 
 	session := &game_session.GameSession{
 		SessionID: sessionID,
@@ -66,6 +74,9 @@ func (s *service) Create(username string, categories []string) (string, error) {
 		Status:    game_session.StatusStarting,
 		CreatedAt: time.Now().Format(time.RFC3339),
 		UpdatedAt: time.Now().Format(time.RFC3339),
+		Metadata: &game_session.SessionMetadata{
+			Holdings: make(map[string]game_session.HoldingInfo),
+		},
 	}
 
 	if err := s.repo.Save(session); err != nil {

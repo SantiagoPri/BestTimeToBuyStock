@@ -8,8 +8,10 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"backend/domain/gm_session"
+	"backend/domain/stock"
 )
 
 type OpenRouterAgent struct {
@@ -41,18 +43,70 @@ type chatMessage struct {
 	Content string `json:"content"`
 }
 
+func extractFirstJSONObject(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", fmt.Errorf("empty response")
+	}
+
+	// For debugging
+	fmt.Printf("Raw AI response: %s\n", raw)
+
+	braces := 0
+	start := -1
+	end := -1
+
+	for i, c := range raw {
+		if c == '{' {
+			if braces == 0 {
+				start = i
+			}
+			braces++
+		} else if c == '}' {
+			braces--
+			if braces == 0 && start != -1 {
+				end = i
+				break
+			}
+		}
+	}
+
+	if start == -1 || end == -1 {
+		return "", fmt.Errorf("no valid JSON object found in response")
+	}
+
+	extracted := raw[start : end+1]
+	fmt.Printf("Extracted JSON: %s\n", extracted)
+
+	// Validate that the extracted content is valid JSON
+	var js json.RawMessage
+	if err := json.Unmarshal([]byte(extracted), &js); err != nil {
+		return "", fmt.Errorf("extracted content is not valid JSON: %w", err)
+	}
+
+	return extracted, nil
+}
+
 func (a *OpenRouterAgent) GetGMResponse(
 	ctx context.Context,
-	week int,
-	categories, tickers []string,
-	lastRatings map[string]string,
-) (*gm_session.GMWeekData, error) {
+	categories []string,
+	stocks []stock.Stock,
+) (map[string]*gm_session.GMWeekData, error) {
 	// Prepare template data
+	stocksData := make([]map[string]interface{}, len(stocks))
+	for i, s := range stocks {
+		stocksData[i] = map[string]interface{}{
+			"ticker":     s.Ticker,
+			"company":    s.Company,
+			"category":   s.Category,
+			"ratingFrom": s.RatingFrom,
+			"ratingTo":   s.RatingTo,
+		}
+	}
+
 	templateData := map[string]interface{}{
-		"Week":        week,
-		"Categories":  categories,
-		"Tickers":     tickers,
-		"LastRatings": lastRatings,
+		"Categories": categories,
+		"stocks":     stocksData,
 	}
 
 	prompt, err := LoadPrompt("infrastructure/ai_model/gm_prompt.txt", templateData)
@@ -101,12 +155,21 @@ func (a *OpenRouterAgent) GetGMResponse(
 		return nil, fmt.Errorf("no response choices returned from API")
 	}
 
-	parsedData := &gm_session.GMWeekData{
-		// Parse the aiResp.Choices[0].Message.Content into your structure
-		// TODO: Implement parsing logic for Headlines and Stocks
+	// Parse the AI response content into weeks data
+	var response struct {
+		Weeks map[string]*gm_session.GMWeekData `json:"weeks"`
 	}
 
-	return parsedData, nil
+	cleanedContent, err := extractFirstJSONObject(aiResp.Choices[0].Message.Content)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract first JSON object: %w", err)
+	}
+
+	if err := json.Unmarshal([]byte(cleanedContent), &response); err != nil {
+		return nil, fmt.Errorf("failed to parse AI response content: %w", err)
+	}
+
+	return response.Weeks, nil
 }
 
 func (a *OpenRouterAgent) makeOpenRouterRequest(ctx context.Context, jsonBody []byte) ([]byte, error) {

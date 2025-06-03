@@ -63,3 +63,7 @@ Your response must be valid JSON, structured like this  make sure to not use any
 Maintain narrative and rating consistency across weeks. Introduce realistic price movements. Use misleading headlines sparingly, but convincingly.
 
 This will be shown to users who must decide what to buy/sell each week. Make it engaging, educational, and unpredictable.
+
+IMPORTANT: You must return a full valid JSON object for all 5 weeks. Each week must include exactly 3 headlines and all 12 stocks with updated fields. Do not stop or truncate output. Do not include comments, explanations, or markdown.
+
+You are not explaining how to do it. You are doing it. This is not an example. This is a real response.

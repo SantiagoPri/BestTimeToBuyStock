@@ -7,6 +7,7 @@ import (
 	gameSessionApp "backend/application/game_session"
 	stockApp "backend/application/stock"
 	snapshotApp "backend/application/stock_snapshot"
+	"backend/infrastructure/ai_model"
 	"backend/infrastructure/redis"
 	categoryRepo "backend/infrastructure/repositories/category"
 	gameSessionRepo "backend/infrastructure/repositories/game_session"
@@ -31,9 +32,14 @@ func NewContainer(db *gorm.DB) *Container {
 	snapshotRepo := snapshotRepo.NewStockSnapshotRepository(db)
 	snapshotService := snapshotApp.NewStockSnapshotService(snapshotRepo)
 
+	aiModel, err := ai_model.NewOpenRouterAgent()
+	if err != nil {
+		panic(err)
+	}
+
 	redisService := redis.NewRedisService()
 	gameSessionRepo := gameSessionRepo.NewRepository(db, redisService)
-	gameSessionService := gameSessionApp.NewService(gameSessionRepo, stockRepo)
+	gameSessionService := gameSessionApp.NewService(gameSessionRepo, stockRepo, aiModel)
 
 	return &Container{
 		StockService:       stockService,

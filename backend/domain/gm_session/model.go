@@ -1,5 +1,14 @@
 package gm_session
 
+import (
+	"backend/domain/stock"
+	"context"
+)
+
+type AI interface {
+	GetGMResponse(ctx context.Context, categories []string, stocks []stock.Stock) (map[string]*GMWeekData, error)
+}
+
 type GMWeekData struct {
 	Headlines []string           `json:"headlines"`
 	Stocks    []StockWeekInsight `json:"stocks"`
