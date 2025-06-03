@@ -6,6 +6,7 @@
     "populateData": "node dist/pipeline.js",
     "categorizeStocks": "node dist/categorizeStocks.js",
     "simulateStocks": "node dist/simulateStocks.js",
+    "migrateCategories": "node dist/migrateCategories.js",
     "build": "tsc",
     "test": "jest"
   },
