@@ -7,20 +7,17 @@ import (
 	gameSessionApp "backend/application/game_session"
 	gmSessionApp "backend/application/gm_session"
 	stockApp "backend/application/stock"
-	snapshotApp "backend/application/stock_snapshot"
 	"backend/infrastructure/ai_model"
 	"backend/infrastructure/redis"
 	categoryRepo "backend/infrastructure/repositories/category"
 	gameSessionRepo "backend/infrastructure/repositories/game_session"
 	gmSessionRepo "backend/infrastructure/repositories/gm_session"
 	stockRepo "backend/infrastructure/repositories/stock"
-	snapshotRepo "backend/infrastructure/repositories/stock_snapshot"
 )
 
 type Container struct {
 	StockService       *stockApp.StockService
 	CategoryService    *categoryApp.CategoryService
-	SnapshotService    *snapshotApp.StockSnapshotService
 	GameSessionService gameSessionApp.Service
 	GMSessionService   gmSessionApp.Service
 }
@@ -31,9 +28,6 @@ func NewContainer(db *gorm.DB) *Container {
 
 	categoryRepo := categoryRepo.NewCategoryRepository(db)
 	categoryService := categoryApp.NewCategoryService(categoryRepo)
-
-	snapshotRepo := snapshotRepo.NewStockSnapshotRepository(db)
-	snapshotService := snapshotApp.NewStockSnapshotService(snapshotRepo)
 
 	aiModel, err := ai_model.NewOpenRouterAgent()
 	if err != nil {
@@ -58,7 +52,6 @@ func NewContainer(db *gorm.DB) *Container {
 	return &Container{
 		StockService:       stockService,
 		CategoryService:    categoryService,
-		SnapshotService:    snapshotService,
 		GameSessionService: gameSessionService,
 		GMSessionService:   gmSessionService,
 	}

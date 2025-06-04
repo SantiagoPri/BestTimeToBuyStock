@@ -8,18 +8,15 @@ import (
 	gameSession "backend/application/game_session"
 	gmSession "backend/application/gm_session"
 	stock "backend/application/stock"
-	snapshot "backend/application/stock_snapshot"
 	categoryHttp "backend/interfaces/http/category"
 	gameSessionHttp "backend/interfaces/http/game_session"
 	gmSessionHttp "backend/interfaces/http/gm_session"
 	stockHttp "backend/interfaces/http/stock"
-	snapshotHttp "backend/interfaces/http/stock_snapshot"
 )
 
 type Router struct {
 	stockService       *stock.StockService
 	categoryService    *category.CategoryService
-	snapshotService    *snapshot.StockSnapshotService
 	gameSessionService gameSession.Service
 	gmSessionService   gmSession.Service
 }
@@ -27,14 +24,12 @@ type Router struct {
 func NewRouter(
 	stockService *stock.StockService,
 	categoryService *category.CategoryService,
-	snapshotService *snapshot.StockSnapshotService,
 	gameSessionService gameSession.Service,
 	gmSessionService gmSession.Service,
 ) *Router {
 	return &Router{
 		stockService:       stockService,
 		categoryService:    categoryService,
-		snapshotService:    snapshotService,
 		gameSessionService: gameSessionService,
 		gmSessionService:   gmSessionService,
 	}
@@ -53,9 +48,6 @@ func (r *Router) SetupRoutes() *gin.Engine {
 
 	categoryHandler := categoryHttp.NewHandler(r.categoryService)
 	categoryHttp.RegisterRoutes(api, categoryHandler)
-
-	snapshotHandler := snapshotHttp.NewHandler(r.snapshotService)
-	snapshotHttp.RegisterRoutes(api, snapshotHandler)
 
 	gameSessionHandler := gameSessionHttp.NewHandler(r.gameSessionService)
 	gameSessionHttp.RegisterRoutes(api, gameSessionHandler)

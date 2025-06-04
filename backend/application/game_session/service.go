@@ -89,7 +89,7 @@ func (s *service) Create(username string, categories []string) (string, error) {
 		Cash:          initialCash,
 		HoldingsValue: 0.00,
 		TotalBalance:  initialCash,
-		Status:        game_session.StatusStarting,
+		Status:        game_session.StatusWeek1,
 		CreatedAt:     time.Now().Format(time.RFC3339),
 		UpdatedAt:     time.Now().Format(time.RFC3339),
 		Metadata: &game_session.SessionMetadata{
@@ -106,8 +106,6 @@ func (s *service) Create(username string, categories []string) (string, error) {
 
 func getCurrentWeek(status game_session.GameSessionStatus) (int, error) {
 	switch status {
-	case game_session.StatusStarting:
-		return 1, nil
 	case game_session.StatusWeek1:
 		return 1, nil
 	case game_session.StatusWeek2:
@@ -312,8 +310,6 @@ func (s *service) AdvanceWeek(sessionID string) error {
 
 	var nextStatus game_session.GameSessionStatus
 	switch session.Status {
-	case game_session.StatusStarting:
-		nextStatus = game_session.StatusWeek1
 	case game_session.StatusWeek1:
 		nextStatus = game_session.StatusWeek2
 	case game_session.StatusWeek2:

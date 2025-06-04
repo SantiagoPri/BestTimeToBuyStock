@@ -37,7 +37,6 @@ func main() {
 	router := httpInterface.NewRouter(
 		container.StockService,
 		container.CategoryService,
-		container.SnapshotService,
 		container.GameSessionService,
 		container.GMSessionService,
 	)
