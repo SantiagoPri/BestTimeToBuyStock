@@ -30,6 +30,11 @@ type updateStateRequest struct {
 	Cash   float64 `json:"cash" binding:"required"`
 }
 
+type tradeRequest struct {
+	Ticker   string `json:"ticker" binding:"required"`
+	Quantity int    `json:"quantity" binding:"required"`
+}
+
 func (h *Handler) CreateSession(c *gin.Context) {
 	var req createSessionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -70,6 +75,78 @@ func (h *Handler) GetLeaderboard(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, leaderboard)
+}
+
+func (h *Handler) BuyStock(c *gin.Context) {
+	sessionID := extractBearerToken(c)
+	if sessionID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid session token"})
+		return
+	}
+
+	var req tradeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.Buy(sessionID, req.Ticker, req.Quantity); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+func (h *Handler) SellStock(c *gin.Context) {
+	sessionID := extractBearerToken(c)
+	if sessionID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid session token"})
+		return
+	}
+
+	var req tradeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.Sell(sessionID, req.Ticker, req.Quantity); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+func (h *Handler) AdvanceWeek(c *gin.Context) {
+	sessionID := extractBearerToken(c)
+	if sessionID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid session token"})
+		return
+	}
+
+	if err := h.service.AdvanceWeek(sessionID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+func (h *Handler) EndSession(c *gin.Context) {
+	sessionID := extractBearerToken(c)
+	if sessionID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid session token"})
+		return
+	}
+
+	if err := h.service.EndSession(sessionID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
 }
 
 func extractBearerToken(c *gin.Context) string {
