@@ -15,9 +15,9 @@ Use these 12 tickers each week. generate the Headlines and price changes that sh
  
 for example but not strict to this there are 3 AI companies and in China suddenly there is a new AI company that is a big deal, then can make those companies go up or down, or USA suddenly put some new sanctions on a company, then can make that company go down. 
 
-If a user “plays well,” their portfolio can outperform; if they follow fake news, they lose money
+If a user "plays well," their portfolio can outperform; if they follow fake news, they lose money
 Maintain narrative and rating consistency across weeks:
-If “CVE” starts at Buy→Buy in Week 1, then in Week 2, CVE’s rating_from must be “Buy.”
+If "CVE" starts at Buy→Buy in Week 1, then in Week 2, CVE's rating_from must be "Buy."
 Ratings can change only when justified by headlines or major events
 
 This Ratings will make the  game strategic, informative, a little deceptive, and ultimately educational.
@@ -27,14 +27,15 @@ Each week, return:
 1. **3 natural-language headlines** hinting at changes, one of which is misleading/fake
 2. **Updated insights for each stock** with: ticker, price, action (e.g., Upgraded), rating change
 
-Your response must be valid JSON, structured like this  make sure to not use any other text than the json so the system can parse it:
+Your response must be valid JSON, structured exactly like this. Each stock entry MUST follow this exact format:
+
 {
   "weeks": {
     "week1": {
       "headlines": [
-        "📰 MacroTech announces unexpected revenue spike after AI integration...",
-        "📰 OPEC tensions hint at oil price instability...",
-        "📰 A leaked document suggests falsified numbers at a major healthcare firm."
+        "📰 First headline",
+        "📰 Second headline",
+        "📰 Third headline"
       ],
       "stocks": [
         {
@@ -59,6 +60,15 @@ Your response must be valid JSON, structured like this  make sure to not use any
   }
 }
 
+IMPORTANT RULES:
+1. Each stock object must have exactly these fields: ticker, rating_from, rating_to, action, price
+2. Do not add any additional fields to the stock objects
+3. The price must be a number (not a string)
+4. The ticker must be a string
+5. Do not include company names in the ticker field
+6. Each week must have exactly 3 headlines
+7. Each week must have exactly 12 stocks
+8. The response must be pure JSON with no additional text or comments
 
 Maintain narrative and rating consistency across weeks. Introduce realistic price movements. Use misleading headlines sparingly, but convincingly.
 

@@ -47,35 +47,46 @@ func sanitizeJSONStrict(raw string) string {
 	var out strings.Builder
 	inString := false
 	escapeNext := false
+	inNumber := false
 
 	for i := 0; i < len(raw); i++ {
 		c := raw[i]
 
+		if escapeNext {
+			out.WriteByte('\\')
+			out.WriteByte(c)
+			escapeNext = false
+			continue
+		}
+
 		if inString {
 			out.WriteByte(c)
-
-			if escapeNext {
-				escapeNext = false
-			} else if c == '\\' {
+			if c == '\\' {
 				escapeNext = true
 			} else if c == '"' {
 				inString = false
+			}
+		} else if inNumber {
+			if (c >= '0' && c <= '9') || c == '.' || c == '-' {
+				out.WriteByte(c)
+			} else {
+				inNumber = false
+				if c == ',' || c == '}' || c == ']' {
+					out.WriteByte(c)
+				}
 			}
 		} else {
 			switch c {
 			case '"':
 				inString = true
 				out.WriteByte(c)
-
-			case '{', '}', '[', ']', ':', ',', '.', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+				inNumber = true
 				out.WriteByte(c)
-
+			case '{', '}', '[', ']', ':', ',':
+				out.WriteByte(c)
 			case ' ', '\n', '\t', '\r':
 				out.WriteByte(c)
-
-			default:
-				// skip unexpected characters outside of strings
-				continue
 			}
 		}
 	}
@@ -89,46 +100,57 @@ func extractFirstJSONObject(raw string) (string, error) {
 		return "", fmt.Errorf("empty response")
 	}
 
-	// For debugging
-	fmt.Printf("Raw AI response: %s\n", raw)
+	// Find the first opening brace
+	start := strings.Index(raw, "{")
+	if start == -1 {
+		return "", fmt.Errorf("no JSON object found in response")
+	}
 
+	// Track nested braces
 	braces := 0
-	start := -1
-	end := -1
+	inString := false
+	escapeNext := false
 
-	for i, c := range raw {
-		if c == '{' {
-			if braces == 0 {
-				start = i
+	for i := start; i < len(raw); i++ {
+		c := raw[i]
+
+		if escapeNext {
+			escapeNext = false
+			continue
+		}
+
+		if inString {
+			if c == '\\' {
+				escapeNext = true
+			} else if c == '"' {
+				inString = false
 			}
+			continue
+		}
+
+		if c == '"' {
+			inString = true
+		} else if c == '{' {
 			braces++
 		} else if c == '}' {
 			braces--
-			if braces == 0 && start != -1 {
-				end = i
-				break
+			if braces == 0 {
+				// Found matching closing brace
+				extracted := raw[start : i+1]
+				sanitized := sanitizeJSONStrict(extracted)
+
+				// Validate JSON structure
+				var js json.RawMessage
+				if err := json.Unmarshal([]byte(sanitized), &js); err != nil {
+					return "", fmt.Errorf("invalid JSON structure: %w", err)
+				}
+
+				return sanitized, nil
 			}
 		}
 	}
 
-	if start == -1 || end == -1 {
-		return "", fmt.Errorf("no valid JSON object found in response")
-	}
-
-	extracted := raw[start : end+1]
-	fmt.Printf("Extracted JSON before sanitization: %s\n", extracted)
-
-	// Sanitize the extracted JSON
-	sanitized := sanitizeJSONStrict(extracted)
-	fmt.Printf("Sanitized JSON: %s\n", sanitized)
-
-	// Validate that the sanitized content is valid JSON
-	var js json.RawMessage
-	if err := json.Unmarshal([]byte(sanitized), &js); err != nil {
-		return "", fmt.Errorf("sanitized content is not valid JSON: %w", err)
-	}
-
-	return sanitized, nil
+	return "", fmt.Errorf("unclosed JSON object")
 }
 
 func (a *OpenRouterAgent) GetGMResponse(
