@@ -423,7 +423,7 @@ const docTemplate = `{
         },
         "/stocks": {
             "get": {
-                "description": "Get a paginated list of stocks",
+                "description": "Get a paginated list of stocks with optional filtering and sorting",
                 "consumes": [
                     "application/json"
                 ],
@@ -447,6 +447,38 @@ const docTemplate = `{
                         "default": 10,
                         "description": "Items per page",
                         "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by ticker (exact match)",
+                        "name": "ticker",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by name (case-insensitive partial match)",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by category (exact match)",
+                        "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "id",
+                        "description": "Sort field (id, ticker, name, category)",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "asc",
+                        "description": "Sort direction (asc, desc)",
+                        "name": "sort_order",
                         "in": "query"
                     }
                 ],

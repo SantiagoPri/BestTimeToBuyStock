@@ -426,7 +426,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get a paginated list of stocks
+      description: Get a paginated list of stocks with optional filtering and sorting
       parameters:
       - default: 1
         description: Page number
@@ -438,6 +438,28 @@ paths:
         in: query
         name: limit
         type: integer
+      - description: Filter by ticker (exact match)
+        in: query
+        name: ticker
+        type: string
+      - description: Filter by name (case-insensitive partial match)
+        in: query
+        name: name
+        type: string
+      - description: Filter by category (exact match)
+        in: query
+        name: category
+        type: string
+      - default: id
+        description: Sort field (id, ticker, name, category)
+        in: query
+        name: sort_by
+        type: string
+      - default: asc
+        description: Sort direction (asc, desc)
+        in: query
+        name: sort_order
+        type: string
       produces:
       - application/json
       responses:

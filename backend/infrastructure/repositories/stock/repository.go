@@ -1,6 +1,10 @@
 package stock
 
 import (
+	"context"
+	"fmt"
+	"strings"
+
 	"backend/domain/stock"
 	"backend/infrastructure/repositories"
 	"backend/pkg/errors"
@@ -8,16 +12,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// Compile-time assertion to ensure StockRepository implements stock.Repository
 var _ stock.Repository = (*StockRepository)(nil)
 
 type StockRepository struct {
 	repo repositories.Repository
+	db   *gorm.DB
 }
 
 func NewStockRepository(db *gorm.DB) *StockRepository {
 	return &StockRepository{
 		repo: repositories.NewBaseRepository(db, &StockEntity{}),
+		db:   db,
 	}
 }
 
@@ -99,4 +104,66 @@ func (r *StockRepository) PickStocksForSession(categories []string) ([]stock.Sto
 	}
 
 	return result, nil
+}
+
+func (r *StockRepository) applyFilters(query *gorm.DB, filters map[string]string) (*gorm.DB, error) {
+	for field, value := range filters {
+		filterType, exists := stock.ValidFilters[field]
+		if !exists {
+			return nil, errors.New(errors.ErrInvalidInput, fmt.Sprintf("invalid filter field: %s", field))
+		}
+
+		switch filterType {
+		case stock.FilterExact:
+			query = query.Where(fmt.Sprintf("%s = ?", field), value)
+		case stock.FilterILike:
+			query = query.Where(fmt.Sprintf("LOWER(%s) LIKE ?", field), "%"+strings.ToLower(value)+"%")
+		}
+	}
+	return query, nil
+}
+
+func (r *StockRepository) applySorting(query *gorm.DB, sortBy, order string) *gorm.DB {
+	if sortBy != "" {
+		direction := "ASC"
+		if strings.ToLower(order) == "desc" {
+			direction = "DESC"
+		}
+		query = query.Order(fmt.Sprintf("%s %s", sortBy, direction))
+	}
+	return query
+}
+
+func (r *StockRepository) FindAllStocks(ctx context.Context, params stock.QueryParams) ([]stock.Stock, int64, error) {
+	var entities []StockEntity
+	var total int64
+
+	query := r.db.Model(&StockEntity{}).WithContext(ctx)
+
+	var err error
+	query, err = r.applyFilters(query, params.Filters)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, errors.Wrap(errors.ErrInternal, "failed to count stocks", err)
+	}
+
+	query = r.applySorting(query, params.SortBy, params.SortOrder)
+
+	offset := (params.Page - 1) * params.PageSize
+	query = query.Offset(offset).Limit(params.PageSize)
+
+	if err := query.Find(&entities).Error; err != nil {
+		return nil, 0, errors.Wrap(errors.ErrInternal, "failed to fetch stocks", err)
+	}
+
+	stocks := make([]stock.Stock, len(entities))
+	for i, entity := range entities {
+		domainStock := ToDomain(&entity)
+		stocks[i] = *domainStock
+	}
+
+	return stocks, total, nil
 }
