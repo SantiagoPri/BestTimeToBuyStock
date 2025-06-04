@@ -43,6 +43,46 @@ type chatMessage struct {
 	Content string `json:"content"`
 }
 
+func sanitizeJSONStrict(raw string) string {
+	var out strings.Builder
+	inString := false
+	escapeNext := false
+
+	for i := 0; i < len(raw); i++ {
+		c := raw[i]
+
+		if inString {
+			out.WriteByte(c)
+
+			if escapeNext {
+				escapeNext = false
+			} else if c == '\\' {
+				escapeNext = true
+			} else if c == '"' {
+				inString = false
+			}
+		} else {
+			switch c {
+			case '"':
+				inString = true
+				out.WriteByte(c)
+
+			case '{', '}', '[', ']', ':', ',', '.', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+				out.WriteByte(c)
+
+			case ' ', '\n', '\t', '\r':
+				out.WriteByte(c)
+
+			default:
+				// skip unexpected characters outside of strings
+				continue
+			}
+		}
+	}
+
+	return out.String()
+}
+
 func extractFirstJSONObject(raw string) (string, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -76,15 +116,19 @@ func extractFirstJSONObject(raw string) (string, error) {
 	}
 
 	extracted := raw[start : end+1]
-	fmt.Printf("Extracted JSON: %s\n", extracted)
+	fmt.Printf("Extracted JSON before sanitization: %s\n", extracted)
 
-	// Validate that the extracted content is valid JSON
+	// Sanitize the extracted JSON
+	sanitized := sanitizeJSONStrict(extracted)
+	fmt.Printf("Sanitized JSON: %s\n", sanitized)
+
+	// Validate that the sanitized content is valid JSON
 	var js json.RawMessage
-	if err := json.Unmarshal([]byte(extracted), &js); err != nil {
-		return "", fmt.Errorf("extracted content is not valid JSON: %w", err)
+	if err := json.Unmarshal([]byte(sanitized), &js); err != nil {
+		return "", fmt.Errorf("sanitized content is not valid JSON: %w", err)
 	}
 
-	return extracted, nil
+	return sanitized, nil
 }
 
 func (a *OpenRouterAgent) GetGMResponse(

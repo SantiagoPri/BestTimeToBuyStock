@@ -6,12 +6,14 @@ import (
 )
 
 type GameSessionEntity struct {
-	SessionID string    `gorm:"column:session_id;primaryKey;type:varchar(64)" json:"session_id"`
-	Username  string    `gorm:"column:username;type:varchar(100);not null" json:"username"`
-	Cash      float64   `gorm:"column:cash;type:decimal(15,2);default:10000.00" json:"cash"`
-	Status    string    `gorm:"column:status;type:varchar(20);default:'starting'" json:"status"`
-	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime" json:"created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime" json:"updated_at"`
+	SessionID     string    `gorm:"column:session_id;primaryKey;type:varchar(64)" json:"session_id"`
+	Username      string    `gorm:"column:username;type:varchar(100);not null" json:"username"`
+	Cash          float64   `gorm:"column:cash;type:decimal(15,2);default:10000.00" json:"cash"`
+	HoldingsValue float64   `gorm:"column:holdings_value;type:decimal(15,2);default:0.00" json:"holdings_value"`
+	TotalBalance  float64   `gorm:"column:total_balance;type:decimal(15,2);default:10000.00" json:"total_balance"`
+	Status        string    `gorm:"column:status;type:varchar(20);default:'starting'" json:"status"`
+	CreatedAt     time.Time `gorm:"column:created_at;autoCreateTime" json:"created_at"`
+	UpdatedAt     time.Time `gorm:"column:updated_at;autoUpdateTime" json:"updated_at"`
 }
 
 func (GameSessionEntity) TableName() string {
@@ -23,12 +25,14 @@ func ToDomain(e *GameSessionEntity) *game_session.GameSession {
 		return nil
 	}
 	return &game_session.GameSession{
-		SessionID: e.SessionID,
-		Username:  e.Username,
-		Cash:      e.Cash,
-		Status:    game_session.GameSessionStatus(e.Status),
-		CreatedAt: e.CreatedAt.Format(time.RFC3339),
-		UpdatedAt: e.UpdatedAt.Format(time.RFC3339),
+		SessionID:     e.SessionID,
+		Username:      e.Username,
+		Cash:          e.Cash,
+		HoldingsValue: e.HoldingsValue,
+		TotalBalance:  e.TotalBalance,
+		Status:        game_session.GameSessionStatus(e.Status),
+		CreatedAt:     e.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:     e.UpdatedAt.Format(time.RFC3339),
 	}
 }
 
@@ -37,12 +41,14 @@ func FromDomain(s *game_session.GameSession) *GameSessionEntity {
 		return nil
 	}
 	return &GameSessionEntity{
-		SessionID: s.SessionID,
-		Username:  s.Username,
-		Cash:      s.Cash,
-		Status:    s.Status.String(),
-		CreatedAt: parseTime(s.CreatedAt),
-		UpdatedAt: parseTime(s.UpdatedAt),
+		SessionID:     s.SessionID,
+		Username:      s.Username,
+		Cash:          s.Cash,
+		HoldingsValue: s.HoldingsValue,
+		TotalBalance:  s.TotalBalance,
+		Status:        s.Status.String(),
+		CreatedAt:     parseTime(s.CreatedAt),
+		UpdatedAt:     parseTime(s.UpdatedAt),
 	}
 }
 

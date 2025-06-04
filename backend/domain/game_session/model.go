@@ -31,11 +31,13 @@ type SessionMetadata struct {
 }
 
 type GameSession struct {
-	SessionID string            `json:"session_id"`
-	Username  string            `json:"username"`
-	Cash      float64           `json:"cash"`
-	Status    GameSessionStatus `json:"status"`
-	CreatedAt string            `json:"created_at"`
-	UpdatedAt string            `json:"updated_at"`
-	Metadata  *SessionMetadata  `json:"metadata,omitempty"`
+	SessionID     string            `json:"session_id"`
+	Username      string            `json:"username"`
+	Cash          float64           `json:"cash"`
+	HoldingsValue float64           `json:"holdings_value"`
+	TotalBalance  float64           `json:"total_balance"`
+	Status        GameSessionStatus `json:"status"`
+	CreatedAt     string            `json:"created_at"`
+	UpdatedAt     string            `json:"updated_at"`
+	Metadata      *SessionMetadata  `json:"metadata,omitempty"`
 }

@@ -1,6 +1,7 @@
 package game_session
 
 import (
+	gmsvc "backend/application/gm_session"
 	"backend/domain/game_session"
 	"backend/domain/gm_session"
 	"backend/domain/stock"
@@ -22,13 +23,20 @@ type service struct {
 	repo      game_session.Repository
 	stockRepo stock.Repository
 	aiModel   gm_session.AI
+	gmService gmsvc.Service
 }
 
-func NewService(repo game_session.Repository, stockRepo stock.Repository, aiModel gm_session.AI) Service {
+func NewService(
+	repo game_session.Repository,
+	stockRepo stock.Repository,
+	aiModel gm_session.AI,
+	gmService gmsvc.Service,
+) Service {
 	return &service{
 		repo:      repo,
 		stockRepo: stockRepo,
 		aiModel:   aiModel,
+		gmService: gmService,
 	}
 }
 
@@ -54,7 +62,6 @@ func (s *service) Create(username string, categories []string) (string, error) {
 		return "", err
 	}
 
-	// Pick stocks for the session
 	stocks, err := s.stockRepo.PickStocksForSession(categories)
 	if err != nil {
 		return "", fmt.Errorf("failed to pick stocks: %w", err)
@@ -67,13 +74,20 @@ func (s *service) Create(username string, categories []string) (string, error) {
 
 	log.Printf("GM Response for session %s: %+v", sessionID, gmData)
 
+	if err := s.gmService.SaveGMWeekData(sessionID, gmData); err != nil {
+		return "", fmt.Errorf("failed to save GM week data: %w", err)
+	}
+
+	initialCash := 10000.00
 	session := &game_session.GameSession{
-		SessionID: sessionID,
-		Username:  username,
-		Cash:      10000.00,
-		Status:    game_session.StatusStarting,
-		CreatedAt: time.Now().Format(time.RFC3339),
-		UpdatedAt: time.Now().Format(time.RFC3339),
+		SessionID:     sessionID,
+		Username:      username,
+		Cash:          initialCash,
+		HoldingsValue: 0.00,
+		TotalBalance:  initialCash,
+		Status:        game_session.StatusStarting,
+		CreatedAt:     time.Now().Format(time.RFC3339),
+		UpdatedAt:     time.Now().Format(time.RFC3339),
 		Metadata: &game_session.SessionMetadata{
 			Holdings: make(map[string]game_session.HoldingInfo),
 		},
