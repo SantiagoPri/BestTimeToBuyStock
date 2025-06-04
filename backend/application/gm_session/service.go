@@ -7,6 +7,7 @@ import (
 
 type Service interface {
 	SaveGMWeekData(sessionID string, gmData map[string]*gm_session.GMWeekData) error
+	GetWeekData(sessionID string, week int) (*gm_session.GMWeekData, error)
 }
 
 type service struct {
@@ -34,4 +35,11 @@ func (s *service) SaveGMWeekData(sessionID string, gmData map[string]*gm_session
 	}
 
 	return nil
+}
+
+func (s *service) GetWeekData(sessionID string, week int) (*gm_session.GMWeekData, error) {
+	if week < 1 || week > 5 {
+		return nil, fmt.Errorf("invalid week number: %d, must be between 1 and 5", week)
+	}
+	return s.repo.GetWeekData(sessionID, week)
 }

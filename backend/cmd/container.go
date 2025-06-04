@@ -22,6 +22,7 @@ type Container struct {
 	CategoryService    *categoryApp.CategoryService
 	SnapshotService    *snapshotApp.StockSnapshotService
 	GameSessionService gameSessionApp.Service
+	GMSessionService   gmSessionApp.Service
 }
 
 func NewContainer(db *gorm.DB) *Container {
@@ -59,5 +60,6 @@ func NewContainer(db *gorm.DB) *Container {
 		CategoryService:    categoryService,
 		SnapshotService:    snapshotService,
 		GameSessionService: gameSessionService,
+		GMSessionService:   gmSessionService,
 	}
 }

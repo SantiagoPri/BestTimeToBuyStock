@@ -39,6 +39,7 @@ func main() {
 		container.CategoryService,
 		container.SnapshotService,
 		container.GameSessionService,
+		container.GMSessionService,
 	)
 
 	handler := router.SetupRoutes()
