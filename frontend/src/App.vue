@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import BaseLayout from './app/layout/BaseLayout.vue';
+import Home from './components/Home.vue';
 </script>
 
 <template>
-  <BaseLayout />
+  <Home />
 </template>
 
 <style scoped>
