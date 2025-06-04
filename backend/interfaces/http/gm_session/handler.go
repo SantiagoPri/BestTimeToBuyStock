@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Handler manages GM session HTTP endpoints
 type Handler struct {
 	service gm_session.Service
 }
@@ -17,6 +18,19 @@ func NewHandler(service gm_session.Service) *Handler {
 	return &Handler{service: service}
 }
 
+// @Summary Get week data
+// @Description Get the game master's data for a specific week
+// @Tags GM Session
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param week path int true "Week number (1-5)" minimum(1) maximum(5)
+// @Success 200 {object} gm_session.GMWeekData "Week data including stock prices and news"
+// @Failure 400 {object} errors.Error "Invalid week number"
+// @Failure 401 {object} errors.Error "Unauthorized - Invalid session"
+// @Failure 404 {object} errors.Error "Week data not found"
+// @Failure 500 {object} errors.Error "Internal server error"
+// @Router /gm/week/{week} [get]
 func (h *Handler) GetWeekData(c *gin.Context) {
 	sessionID := extractBearerToken(c)
 	if sessionID == "" {

@@ -3,6 +3,8 @@ package http
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	category "backend/application/category"
 	gameSession "backend/application/game_session"
@@ -54,6 +56,9 @@ func (r *Router) SetupRoutes() *gin.Engine {
 
 	gmSessionHandler := gmSessionHttp.NewHandler(r.gmSessionService)
 	gmSessionHttp.RegisterRoutes(api, gmSessionHandler)
+
+	// Swagger documentation endpoint
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	return router
 }

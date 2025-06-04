@@ -2,6 +2,7 @@ package game_session
 
 import (
 	"backend/domain/game_session"
+	"backend/pkg/errors"
 	"context"
 	"fmt"
 	"log"
@@ -27,13 +28,13 @@ func NewRepository(db *gorm.DB, redisService redis.RedisService) game_session.Re
 func (r *repository) Save(session *game_session.GameSession) error {
 	entity := FromDomain(session)
 	if err := r.db.Create(entity).Error; err != nil {
-		return fmt.Errorf("failed to save session: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to save session", err)
 	}
 	redisKey := fmt.Sprintf("session:%s:metadata", session.SessionID)
 	ctx := context.Background()
 
 	if err := r.redisService.Set(ctx, redisKey, session.Metadata, 2*time.Hour); err != nil {
-		return fmt.Errorf("failed to save session metadata: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to save session metadata", err)
 	}
 
 	return nil
@@ -42,13 +43,16 @@ func (r *repository) Save(session *game_session.GameSession) error {
 func (r *repository) FindBySessionID(sessionID string) (*game_session.GameSession, error) {
 	var entity GameSessionEntity
 	if err := r.db.Where("session_id = ?", sessionID).First(&entity).Error; err != nil {
-		return nil, err
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.New(errors.ErrNotFound, "session not found")
+		}
+		return nil, errors.Wrap(errors.ErrInternal, "failed to find session", err)
 	}
 
 	session := ToDomain(&entity)
 
 	if session.Status.IsFinished() {
-		return nil, fmt.Errorf("session %s is no longer active", sessionID)
+		return nil, errors.New(errors.ErrNotAvailable, "session is no longer active")
 	}
 
 	var metadata game_session.SessionMetadata
@@ -57,9 +61,9 @@ func (r *repository) FindBySessionID(sessionID string) (*game_session.GameSessio
 		// If Redis data not found, mark session as expired
 		session.Status = game_session.StatusExpired
 		if err := r.db.Model(&GameSessionEntity{}).Where("session_id = ?", session.SessionID).Update("status", session.Status).Error; err != nil {
-			return nil, fmt.Errorf("failed to update expired session status: %w", err)
+			return nil, errors.Wrap(errors.ErrInternal, "failed to update expired session status", err)
 		}
-		return nil, fmt.Errorf("session %s has expired", sessionID)
+		return nil, errors.New(errors.ErrNotAvailable, "session has expired")
 	}
 
 	session.Metadata = &metadata

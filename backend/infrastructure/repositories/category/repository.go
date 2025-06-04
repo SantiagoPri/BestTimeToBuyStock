@@ -3,6 +3,7 @@ package category
 import (
 	"backend/domain/category"
 	"backend/infrastructure/repositories"
+	"backend/pkg/errors"
 
 	"gorm.io/gorm"
 )
@@ -22,14 +23,17 @@ func NewCategoryRepository(db *gorm.DB) *CategoryRepository {
 
 func (r *CategoryRepository) Save(c *category.Category) error {
 	entity := FromDomain(c)
-	return r.repo.Save(entity)
+	if err := r.repo.Save(entity); err != nil {
+		return errors.Wrap(errors.ErrInternal, "failed to save category", err)
+	}
+	return nil
 }
 
 func (r *CategoryRepository) FindAll() ([]category.Category, error) {
 	var entities []CategoryEntity
 	err := r.repo.FindAll(&entities)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(errors.ErrInternal, "failed to find categories", err)
 	}
 
 	categories := make([]category.Category, len(entities))
@@ -41,14 +45,20 @@ func (r *CategoryRepository) FindAll() ([]category.Category, error) {
 }
 
 func (r *CategoryRepository) DeleteByName(name string) error {
-	return r.repo.DeleteByField("name", name, &CategoryEntity{})
+	if err := r.repo.DeleteByField("name", name, &CategoryEntity{}); err != nil {
+		return errors.Wrap(errors.ErrInternal, "failed to delete category", err)
+	}
+	return nil
 }
 
 func (r *CategoryRepository) FindBy(filters map[string]any) (*category.Category, error) {
 	var entity CategoryEntity
 	err := r.repo.FindOneBy(filters, &entity)
 	if err != nil {
-		return nil, err
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.New(errors.ErrNotFound, "category not found")
+		}
+		return nil, errors.Wrap(errors.ErrInternal, "failed to find category", err)
 	}
 	return ToDomain(&entity), nil
 }
@@ -57,7 +67,7 @@ func (r *CategoryRepository) FindPaginated(page int, limit int) ([]category.Cate
 	var entities []CategoryEntity
 	total, err := r.repo.FindPaginated(&entities, page, limit)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, errors.Wrap(errors.ErrInternal, "failed to find paginated categories", err)
 	}
 
 	categories := make([]category.Category, len(entities))

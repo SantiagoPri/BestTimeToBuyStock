@@ -2,6 +2,7 @@ package gm_session
 
 import (
 	"backend/domain/gm_session"
+	"backend/pkg/errors"
 	"fmt"
 )
 
@@ -26,11 +27,11 @@ func (s *service) SaveGMWeekData(sessionID string, gmData map[string]*gm_session
 		weekKey := fmt.Sprintf("week%d", i)
 		weekData, exists := gmData[weekKey]
 		if !exists {
-			return fmt.Errorf("missing data for %s", weekKey)
+			return errors.New(errors.ErrInvalidInput, "missing data for "+weekKey)
 		}
 
 		if err := s.repo.SaveWeekData(sessionID, i, weekData); err != nil {
-			return fmt.Errorf("failed to save data for %s: %w", weekKey, err)
+			return errors.Wrap(errors.ErrInternal, "failed to save data for "+weekKey, err)
 		}
 	}
 
@@ -39,7 +40,7 @@ func (s *service) SaveGMWeekData(sessionID string, gmData map[string]*gm_session
 
 func (s *service) GetWeekData(sessionID string, week int) (*gm_session.GMWeekData, error) {
 	if week < 1 || week > 5 {
-		return nil, fmt.Errorf("invalid week number: %d, must be between 1 and 5", week)
+		return nil, errors.New(errors.ErrInvalidInput, "invalid week number: must be between 1 and 5")
 	}
 	return s.repo.GetWeekData(sessionID, week)
 }

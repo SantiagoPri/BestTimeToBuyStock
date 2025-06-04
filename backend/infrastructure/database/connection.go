@@ -1,6 +1,7 @@
 package database
 
 import (
+	"backend/pkg/errors"
 	"os"
 
 	"gorm.io/driver/postgres"
@@ -15,4 +16,4 @@ func Connect() (*gorm.DB, error) {
 	return gorm.Open(postgres.Open(dsn), &gorm.Config{})
 }
 
-var ErrMissingDBURL = gorm.ErrInvalidDB
+var ErrMissingDBURL = errors.New(errors.ErrBadRequest, "missing DATABASE_URL environment variable")

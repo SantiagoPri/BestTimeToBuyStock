@@ -1,6 +1,5 @@
 package game_session
 
-// GameSessionTx represents a transaction for game session operations
 type GameSessionTx interface {
 	Commit() error
 	Rollback() error
@@ -8,7 +7,6 @@ type GameSessionTx interface {
 	Update(*GameSession) error
 }
 
-// Repository represents the game session repository interface
 type Repository interface {
 	Save(*GameSession) error
 	FindBySessionID(string) (*GameSession, error)

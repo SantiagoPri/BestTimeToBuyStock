@@ -1,0 +1,498 @@
+basePath: /api
+definitions:
+  errors.Error:
+    description: Standard error response format
+    properties:
+      code:
+        description: |-
+          @Description The error code identifying the type of error
+          @Example validation_error
+        type: string
+      details:
+        description: |-
+          @Description Optional details about the error
+          @Example Stack trace or additional context
+        type: string
+      message:
+        description: |-
+          @Description A human-readable error message
+          @Example Invalid input parameters
+        type: string
+    type: object
+  game_session.GameSession:
+    properties:
+      cash:
+        type: number
+      created_at:
+        type: string
+      holdings_value:
+        type: number
+      metadata:
+        $ref: '#/definitions/game_session.SessionMetadata'
+      session_id:
+        type: string
+      status:
+        $ref: '#/definitions/game_session.GameSessionStatus'
+      total_balance:
+        type: number
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  game_session.GameSessionStatus:
+    enum:
+    - starting
+    - week1
+    - week2
+    - week3
+    - week4
+    - week5
+    - finished
+    - expired
+    type: string
+    x-enum-varnames:
+    - StatusStarting
+    - StatusWeek1
+    - StatusWeek2
+    - StatusWeek3
+    - StatusWeek4
+    - StatusWeek5
+    - StatusFinished
+    - StatusExpired
+  game_session.HoldingInfo:
+    properties:
+      quantity:
+        type: integer
+      total_spent:
+        type: number
+    type: object
+  game_session.SessionMetadata:
+    properties:
+      holdings:
+        additionalProperties:
+          $ref: '#/definitions/game_session.HoldingInfo'
+        type: object
+    type: object
+  game_session.createSessionRequest:
+    description: Request body for creating a new session
+    properties:
+      categories:
+        description: |-
+          @Description List of exactly 3 stock categories
+          @Required
+          @MinItems 3
+          @MaxItems 3
+        example:
+        - '[''tech'''
+        - '''healthcare'''
+        - '''energy'']'
+        items:
+          type: string
+        type: array
+      username:
+        description: |-
+          @Description User's display name
+          @Required
+        example: john_doe
+        type: string
+    required:
+    - categories
+    - username
+    type: object
+  game_session.createSessionResponse:
+    description: Response for session creation
+    properties:
+      sessionId:
+        description: '@Description Unique session identifier'
+        example: abc123def456
+        type: string
+    type: object
+  game_session.tradeRequest:
+    description: Request body for trading stocks
+    properties:
+      quantity:
+        description: |-
+          @Description Number of shares to trade
+          @Required
+          @Minimum 1
+        example: 100
+        type: integer
+      ticker:
+        description: |-
+          @Description Stock ticker symbol
+          @Required
+        example: AAPL
+        type: string
+    required:
+    - quantity
+    - ticker
+    type: object
+  gm_session.GMWeekData:
+    properties:
+      headlines:
+        items:
+          type: string
+        type: array
+      stocks:
+        items:
+          $ref: '#/definitions/gm_session.StockWeekInsight'
+        type: array
+    type: object
+  gm_session.StockWeekInsight:
+    properties:
+      action:
+        type: string
+      price:
+        type: number
+      rating_from:
+        type: string
+      rating_to:
+        type: string
+      ticker:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: A stock trading game API where users can practice trading with historical
+    data.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Best Time To Buy Stock API
+  version: "1.0"
+paths:
+  /categories:
+    get:
+      consumes:
+      - application/json
+      description: Get a paginated list of stock categories
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of categories with pagination info
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/errors.Error'
+      summary: List all categories
+      tags:
+      - Categories
+  /gm/week/{week}:
+    get:
+      consumes:
+      - application/json
+      description: Get the game master's data for a specific week
+      parameters:
+      - description: Week number (1-5)
+        in: path
+        maximum: 5
+        minimum: 1
+        name: week
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Week data including stock prices and news
+          schema:
+            $ref: '#/definitions/gm_session.GMWeekData'
+        "400":
+          description: Invalid week number
+          schema:
+            $ref: '#/definitions/errors.Error'
+        "401":
+          description: Unauthorized - Invalid session
+          schema:
+            $ref: '#/definitions/errors.Error'
+        "404":
+          description: Week data not found
+          schema:
+            $ref: '#/definitions/errors.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/errors.Error'
+      security:
+      - BearerAuth: []
+      summary: Get week data
+      tags:
+      - GM Session
+  /leaderboard:
+    get:
+      description: Retrieves top 10 finished sessions ordered by total balance
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Leaderboard entries
+          schema:
+            items:
+              $ref: '#/definitions/game_session.GameSession'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/errors.Error'
+      summary: Get leaderboard
+      tags:
+      - Game Session
+  /sessions:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new game session for a user with selected stock categories
+      parameters:
+      - description: Session creation parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/game_session.createSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Session created successfully
+          schema:
+            $ref: '#/definitions/game_session.createSessionResponse'
+        "400":
+          description: Invalid input - Username missing or categories != 3
+          schema:
+            $ref: '#/definitions/errors.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/errors.Error'
+      summary: Create a new game session
+      tags:
+      - Game Session
+  /sessions/advance:
+    post:
+      description: Advances the session to the next week, updating stock prices
+      responses:
+        "200":
+          description: Advanced to next week
+        "400":
+          description: Cannot advance beyond week 5
+          schema:
+            $ref: '#/definitions/errors.Error'
+        "401":
+          description: Unauthorized - Invalid session
+          schema:
+            $ref: '#/definitions/errors.Error'
+      security:
+      - BearerAuth: []
+      summary: Advance to next week
+      tags:
+      - Game Session
+  /sessions/buy:
+    post:
+      consumes:
+      - application/json
+      description: Purchase a specified quantity of a stock in the current session
+      parameters:
+      - description: Buy order details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/game_session.tradeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Purchase successful
+        "400":
+          description: Invalid input - Missing ticker or quantity
+          schema:
+            $ref: '#/definitions/errors.Error'
+        "401":
+          description: Unauthorized - Invalid session
+          schema:
+            $ref: '#/definitions/errors.Error'
+        "404":
+          description: Stock not found
+          schema:
+            $ref: '#/definitions/errors.Error'
+        "422":
+          description: Insufficient funds
+          schema:
+            $ref: '#/definitions/errors.Error'
+      security:
+      - BearerAuth: []
+      summary: Buy stocks
+      tags:
+      - Trading
+  /sessions/end:
+    post:
+      description: Ends the current session, selling all holdings at current prices
+      responses:
+        "200":
+          description: Session ended successfully
+        "400":
+          description: Can only end session in week 5
+          schema:
+            $ref: '#/definitions/errors.Error'
+        "401":
+          description: Unauthorized - Invalid session
+          schema:
+            $ref: '#/definitions/errors.Error'
+      security:
+      - BearerAuth: []
+      summary: End session
+      tags:
+      - Game Session
+  /sessions/sell:
+    post:
+      consumes:
+      - application/json
+      description: Sell a specified quantity of a stock in the current session
+      parameters:
+      - description: Sell order details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/game_session.tradeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Sale successful
+        "400":
+          description: Invalid input - Missing ticker or quantity
+          schema:
+            $ref: '#/definitions/errors.Error'
+        "401":
+          description: Unauthorized - Invalid session
+          schema:
+            $ref: '#/definitions/errors.Error'
+        "404":
+          description: Stock not found or insufficient holdings
+          schema:
+            $ref: '#/definitions/errors.Error'
+      security:
+      - BearerAuth: []
+      summary: Sell stocks
+      tags:
+      - Trading
+  /sessions/state:
+    get:
+      description: Retrieves the current state of a game session including cash, holdings,
+        and status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Current session state
+          schema:
+            $ref: '#/definitions/game_session.GameSession'
+        "401":
+          description: Unauthorized - Invalid session
+          schema:
+            $ref: '#/definitions/errors.Error'
+        "404":
+          description: Session not found
+          schema:
+            $ref: '#/definitions/errors.Error'
+      security:
+      - BearerAuth: []
+      summary: Get current session state
+      tags:
+      - Game Session
+  /stocks:
+    get:
+      consumes:
+      - application/json
+      description: Get a paginated list of stocks
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of stocks with pagination info
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/errors.Error'
+      summary: List all stocks
+      tags:
+      - Stocks
+  /stocks/{param}:
+    get:
+      consumes:
+      - application/json
+      description: Get a stock by its ID (19 digits) or ticker symbol (3-6 uppercase
+        characters)
+      parameters:
+      - description: Stock ID or ticker
+        example: '"AAPL"'
+        in: path
+        name: param
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Stock details
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid input - wrong format
+          schema:
+            $ref: '#/definitions/errors.Error'
+        "404":
+          description: Stock not found
+          schema:
+            $ref: '#/definitions/errors.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/errors.Error'
+      summary: Get stock by ID or ticker
+      tags:
+      - Stocks
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and the session ID.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

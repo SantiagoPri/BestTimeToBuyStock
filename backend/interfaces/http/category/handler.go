@@ -19,13 +19,23 @@ func NewHandler(categoryService *categoryApp.CategoryService) *Handler {
 	}
 }
 
+// @Summary List all categories
+// @Description Get a paginated list of stock categories
+// @Tags Categories
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} map[string]interface{} "List of categories with pagination info"
+// @Failure 500 {object} errors.Error "Internal server error"
+// @Router /categories [get]
 func (h *Handler) FindAll(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 
 	categories, total, err := h.categoryService.FindPaginated(page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch categories"})
+		_ = c.Error(err)
 		return
 	}
 

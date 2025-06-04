@@ -5,6 +5,7 @@ import (
 	"backend/domain/game_session"
 	"backend/domain/gm_session"
 	"backend/domain/stock"
+	"backend/pkg/errors"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -21,6 +22,8 @@ type Service interface {
 	Sell(sessionID string, ticker string, quantity int) error
 	AdvanceWeek(sessionID string) error
 	EndSession(sessionID string) error
+	SaveGMWeekData(sessionID string, gmData map[string]*gm_session.GMWeekData) error
+	GetWeekData(sessionID string, week int) (*gm_session.GMWeekData, error)
 }
 
 type service struct {
@@ -123,12 +126,12 @@ func getCurrentWeek(status game_session.GameSessionStatus) (int, error) {
 
 func (s *service) Buy(sessionID string, ticker string, quantity int) error {
 	if quantity <= 0 {
-		return fmt.Errorf("quantity must be positive")
+		return errors.New(errors.ErrInvalidInput, "quantity must be positive")
 	}
 
 	tx, err := s.repo.BeginTransaction(sessionID)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to begin transaction", err)
 	}
 	defer tx.Rollback()
 
@@ -136,12 +139,12 @@ func (s *service) Buy(sessionID string, ticker string, quantity int) error {
 
 	currentWeek, err := getCurrentWeek(session.Status)
 	if err != nil {
-		return err
+		return errors.Wrap(errors.ErrInvalidInput, "failed to get current week", err)
 	}
 
 	gmData, err := s.gmService.GetWeekData(sessionID, currentWeek)
 	if err != nil {
-		return fmt.Errorf("failed to get GM week data: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to get GM week data", err)
 	}
 
 	var stockPrice float64
@@ -154,13 +157,13 @@ func (s *service) Buy(sessionID string, ticker string, quantity int) error {
 		}
 	}
 	if !found {
-		return fmt.Errorf("stock %s not found in current week data", ticker)
+		return errors.New(errors.ErrNotFound, fmt.Sprintf("stock %s not found in current week data", ticker))
 	}
 
 	totalCost := stockPrice * float64(quantity)
 
 	if totalCost > session.Cash {
-		return fmt.Errorf("insufficient funds: need %.2f, have %.2f", totalCost, session.Cash)
+		return errors.New(errors.ErrInvalidInput, fmt.Sprintf("insufficient funds: need %.2f, have %.2f", totalCost, session.Cash))
 	}
 
 	if session.Metadata == nil {
@@ -198,11 +201,11 @@ func (s *service) Buy(sessionID string, ticker string, quantity int) error {
 	session.UpdatedAt = time.Now().Format(time.RFC3339)
 
 	if err := tx.Update(session); err != nil {
-		return fmt.Errorf("failed to update session: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to update session", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to commit transaction", err)
 	}
 
 	return nil
@@ -210,38 +213,38 @@ func (s *service) Buy(sessionID string, ticker string, quantity int) error {
 
 func (s *service) Sell(sessionID string, ticker string, quantity int) error {
 	if quantity <= 0 {
-		return fmt.Errorf("quantity must be positive")
+		return errors.New(errors.ErrInvalidInput, "quantity must be positive")
 	}
 
 	tx, err := s.repo.BeginTransaction(sessionID)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to begin transaction", err)
 	}
 	defer tx.Rollback()
 
 	session := tx.GetSession()
 
 	if session.Metadata == nil || session.Metadata.Holdings == nil {
-		return fmt.Errorf("no holdings found")
+		return errors.New(errors.ErrNotFound, "no holdings found")
 	}
 
 	holding, exists := session.Metadata.Holdings[ticker]
 	if !exists {
-		return fmt.Errorf("no holdings found for stock %s", ticker)
+		return errors.New(errors.ErrNotFound, fmt.Sprintf("no holdings found for stock %s", ticker))
 	}
 
 	if holding.Quantity < quantity {
-		return fmt.Errorf("insufficient stocks: have %d, want to sell %d", holding.Quantity, quantity)
+		return errors.New(errors.ErrInvalidInput, fmt.Sprintf("insufficient stocks: have %d, want to sell %d", holding.Quantity, quantity))
 	}
 
 	currentWeek, err := getCurrentWeek(session.Status)
 	if err != nil {
-		return err
+		return errors.Wrap(errors.ErrInvalidInput, "failed to get current week", err)
 	}
 
 	gmData, err := s.gmService.GetWeekData(sessionID, currentWeek)
 	if err != nil {
-		return fmt.Errorf("failed to get GM week data: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to get GM week data", err)
 	}
 
 	var stockPrice float64
@@ -254,7 +257,7 @@ func (s *service) Sell(sessionID string, ticker string, quantity int) error {
 		}
 	}
 	if !found {
-		return fmt.Errorf("stock %s not found in current week data", ticker)
+		return errors.New(errors.ErrNotFound, fmt.Sprintf("stock %s not found in current week data", ticker))
 	}
 
 	saleProceeds := stockPrice * float64(quantity)
@@ -280,11 +283,11 @@ func (s *service) Sell(sessionID string, ticker string, quantity int) error {
 	session.UpdatedAt = time.Now().Format(time.RFC3339)
 
 	if err := tx.Update(session); err != nil {
-		return fmt.Errorf("failed to update session: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to update session", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to commit transaction", err)
 	}
 
 	return nil
@@ -293,7 +296,7 @@ func (s *service) Sell(sessionID string, ticker string, quantity int) error {
 func (s *service) AdvanceWeek(sessionID string) error {
 	tx, err := s.repo.BeginTransaction(sessionID)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to begin transaction", err)
 	}
 	defer tx.Rollback()
 
@@ -301,11 +304,11 @@ func (s *service) AdvanceWeek(sessionID string) error {
 
 	currentWeek, err := getCurrentWeek(session.Status)
 	if err != nil {
-		return err
+		return errors.Wrap(errors.ErrInvalidInput, "failed to get current week", err)
 	}
 
 	if currentWeek >= 5 {
-		return fmt.Errorf("cannot advance beyond week 5")
+		return errors.New(errors.ErrInvalidInput, "cannot advance beyond week 5")
 	}
 
 	var nextStatus game_session.GameSessionStatus
@@ -319,13 +322,13 @@ func (s *service) AdvanceWeek(sessionID string) error {
 	case game_session.StatusWeek4:
 		nextStatus = game_session.StatusWeek5
 	default:
-		return fmt.Errorf("invalid game status for advancing week: %s", session.Status)
+		return errors.New(errors.ErrInvalidInput, fmt.Sprintf("invalid game status for advancing week: %s", session.Status))
 	}
 
 	nextWeek := currentWeek + 1
 	gmData, err := s.gmService.GetWeekData(sessionID, nextWeek)
 	if err != nil {
-		return fmt.Errorf("failed to get GM week data: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to get GM week data", err)
 	}
 
 	holdingsValue := 0.0
@@ -344,11 +347,11 @@ func (s *service) AdvanceWeek(sessionID string) error {
 	session.UpdatedAt = time.Now().Format(time.RFC3339)
 
 	if err := tx.Update(session); err != nil {
-		return fmt.Errorf("failed to update session: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to update session", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to commit transaction", err)
 	}
 
 	return nil
@@ -357,7 +360,7 @@ func (s *service) AdvanceWeek(sessionID string) error {
 func (s *service) EndSession(sessionID string) error {
 	tx, err := s.repo.BeginTransaction(sessionID)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to begin transaction", err)
 	}
 	defer tx.Rollback()
 
@@ -365,16 +368,16 @@ func (s *service) EndSession(sessionID string) error {
 
 	currentWeek, err := getCurrentWeek(session.Status)
 	if err != nil {
-		return err
+		return errors.Wrap(errors.ErrInvalidInput, "failed to get current week", err)
 	}
 
 	if currentWeek != 5 {
-		return fmt.Errorf("can only end session in week 5, current week: %d", currentWeek)
+		return errors.New(errors.ErrInvalidInput, fmt.Sprintf("can only end session in week 5, current week: %d", currentWeek))
 	}
 
 	gmData, err := s.gmService.GetWeekData(sessionID, currentWeek)
 	if err != nil {
-		return fmt.Errorf("failed to get GM week data: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to get GM week data", err)
 	}
 
 	for ticker, holding := range session.Metadata.Holdings {
@@ -397,12 +400,20 @@ func (s *service) EndSession(sessionID string) error {
 	session.UpdatedAt = time.Now().Format(time.RFC3339)
 
 	if err := tx.Update(session); err != nil {
-		return fmt.Errorf("failed to update session: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to update session", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return errors.Wrap(errors.ErrInternal, "failed to commit transaction", err)
 	}
 
 	return nil
+}
+
+func (s *service) SaveGMWeekData(sessionID string, gmData map[string]*gm_session.GMWeekData) error {
+	return s.gmService.SaveGMWeekData(sessionID, gmData)
+}
+
+func (s *service) GetWeekData(sessionID string, week int) (*gm_session.GMWeekData, error) {
+	return s.gmService.GetWeekData(sessionID, week)
 }

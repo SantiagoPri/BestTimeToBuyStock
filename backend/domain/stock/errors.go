@@ -1,7 +1,7 @@
 package stock
 
-import "errors"
+import "backend/pkg/errors"
 
 var (
-	ErrNotFound = errors.New("stock not found")
+	ErrNotFound = errors.New(errors.ErrNotFound, "stock not found")
 )

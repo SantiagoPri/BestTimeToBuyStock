@@ -3,8 +3,7 @@ package stock
 import (
 	"backend/domain/stock"
 	"backend/infrastructure/repositories"
-
-	"fmt"
+	"backend/pkg/errors"
 
 	"gorm.io/gorm"
 )
@@ -24,14 +23,17 @@ func NewStockRepository(db *gorm.DB) *StockRepository {
 
 func (r *StockRepository) Save(s *stock.Stock) error {
 	entity := FromDomain(s)
-	return r.repo.Save(entity)
+	if err := r.repo.Save(entity); err != nil {
+		return errors.Wrap(errors.ErrInternal, "failed to save stock", err)
+	}
+	return nil
 }
 
 func (r *StockRepository) FindAll() ([]stock.Stock, error) {
 	var entities []StockEntity
 	err := r.repo.FindAll(&entities)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(errors.ErrInternal, "failed to find stocks", err)
 	}
 
 	stocks := make([]stock.Stock, len(entities))
@@ -43,14 +45,20 @@ func (r *StockRepository) FindAll() ([]stock.Stock, error) {
 }
 
 func (r *StockRepository) DeleteByTicker(ticker string) error {
-	return r.repo.DeleteByField("ticker", ticker, &StockEntity{})
+	if err := r.repo.DeleteByField("ticker", ticker, &StockEntity{}); err != nil {
+		return errors.Wrap(errors.ErrInternal, "failed to delete stock", err)
+	}
+	return nil
 }
 
 func (r *StockRepository) FindBy(filters map[string]any) (*stock.Stock, error) {
 	var entity StockEntity
 	err := r.repo.FindOneBy(filters, &entity)
 	if err != nil {
-		return nil, err
+		if err == gorm.ErrRecordNotFound {
+			return nil, stock.ErrNotFound
+		}
+		return nil, errors.Wrap(errors.ErrInternal, "failed to find stock", err)
 	}
 	return ToDomain(&entity), nil
 }
@@ -59,7 +67,7 @@ func (r *StockRepository) FindPaginated(page int, limit int) ([]stock.Stock, int
 	var entities []StockEntity
 	total, err := r.repo.FindPaginated(&entities, page, limit)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, errors.Wrap(errors.ErrInternal, "failed to find paginated stocks", err)
 	}
 
 	stocks := make([]stock.Stock, len(entities))
@@ -72,7 +80,7 @@ func (r *StockRepository) FindPaginated(page int, limit int) ([]stock.Stock, int
 
 func (r *StockRepository) PickStocksForSession(categories []string) ([]stock.Stock, error) {
 	if len(categories) != 3 {
-		return nil, fmt.Errorf("exactly 3 categories required, got %d", len(categories))
+		return nil, errors.New(errors.ErrInvalidInput, "exactly 3 categories required")
 	}
 
 	result := make([]stock.Stock, 0, 12)
@@ -81,7 +89,7 @@ func (r *StockRepository) PickStocksForSession(categories []string) ([]stock.Sto
 		var entities []StockEntity
 		err := r.repo.FindRandomByField("category", category, 4, &entities)
 		if err != nil {
-			return nil, fmt.Errorf("error fetching stocks for category %s: %w", category, err)
+			return nil, errors.Wrap(errors.ErrInternal, "failed to fetch stocks for category", err)
 		}
 
 		for _, entity := range entities {

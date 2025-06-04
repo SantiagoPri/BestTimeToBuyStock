@@ -1,9 +1,9 @@
 package redis
 
 import (
+	"backend/pkg/errors"
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 )
 
@@ -24,11 +24,11 @@ func NewRedisService() RedisService {
 func (s *redisService) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
 	data, err := json.Marshal(value)
 	if err != nil {
-		return fmt.Errorf("failed to marshal value for key %s: %w", key, err)
+		return errors.Wrap(errors.ErrInternal, "failed to marshal value", err)
 	}
 
 	if err := GetClient().Set(ctx, key, data, ttl).Err(); err != nil {
-		return fmt.Errorf("failed to set value for key %s: %w", key, err)
+		return errors.Wrap(errors.ErrInternal, "failed to set value in Redis", err)
 	}
 
 	return nil
@@ -37,11 +37,11 @@ func (s *redisService) Set(ctx context.Context, key string, value any, ttl time.
 func (s *redisService) Get(ctx context.Context, key string, dest any) error {
 	data, err := GetClient().Get(ctx, key).Bytes()
 	if err != nil {
-		return fmt.Errorf("failed to get value for key %s: %w", key, err)
+		return errors.Wrap(errors.ErrNotFound, "failed to get value from Redis", err)
 	}
 
 	if err := json.Unmarshal(data, dest); err != nil {
-		return fmt.Errorf("failed to unmarshal value for key %s: %w", key, err)
+		return errors.Wrap(errors.ErrInternal, "failed to unmarshal value", err)
 	}
 
 	return nil
@@ -49,11 +49,14 @@ func (s *redisService) Get(ctx context.Context, key string, dest any) error {
 
 func (s *redisService) Delete(ctx context.Context, key string) error {
 	if err := GetClient().Del(ctx, key).Err(); err != nil {
-		return fmt.Errorf("failed to delete key %s: %w", key, err)
+		return errors.Wrap(errors.ErrInternal, "failed to delete key from Redis", err)
 	}
 	return nil
 }
 
 func (s *redisService) Ping(ctx context.Context) error {
-	return Ping(ctx)
+	if err := Ping(ctx); err != nil {
+		return errors.Wrap(errors.ErrInternal, "failed to ping Redis", err)
+	}
+	return nil
 }
