@@ -1,5 +1,19 @@
 import type { GameSession, CreateSessionRequest, CreateSessionResponse, TradeRequest } from '../entities/GameSession';
 import type { GameSessionRepository } from '../repositories/GameSessionRepository';
+import type { Stock } from '../../modules/stocks/domain/models/Stock';
+
+export interface ApiStock {
+  ticker: string;
+  rating_from: string;
+  rating_to: string;
+  action: string;
+  price: number;
+}
+
+export interface WeekData {
+  headlines: string[];
+  stocks: ApiStock[];
+}
 
 export class GameSessionService {
   constructor(private readonly repository: GameSessionRepository) {}
@@ -53,5 +67,13 @@ export class GameSessionService {
     }
     await this.repository.endSession(sessionId);
     localStorage.removeItem('sessionId');
+  }
+
+  async getWeekData(week: number): Promise<WeekData> {
+    const sessionId = localStorage.getItem('sessionId');
+    if (!sessionId) {
+      throw new Error('No active session');
+    }
+    return this.repository.getWeekData(week, sessionId);
   }
 }

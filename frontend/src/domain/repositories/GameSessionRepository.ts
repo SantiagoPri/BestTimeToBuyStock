@@ -1,4 +1,5 @@
 import type { GameSession, CreateSessionRequest, CreateSessionResponse, TradeRequest } from '../entities/GameSession';
+import type { WeekData } from '../services/GameSessionService';
 
 export interface GameSessionRepository {
   getLeaderboard(): Promise<GameSession[]>;
@@ -8,4 +9,5 @@ export interface GameSessionRepository {
   sellStocks(sessionId: string, request: TradeRequest): Promise<void>;
   advanceWeek(sessionId: string): Promise<void>;
   endSession(sessionId: string): Promise<void>;
+  getWeekData(week: number, sessionId: string): Promise<WeekData>;
 }

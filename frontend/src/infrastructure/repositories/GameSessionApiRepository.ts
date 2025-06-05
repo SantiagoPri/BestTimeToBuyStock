@@ -5,6 +5,7 @@ import type {
   TradeRequest,
 } from '../../domain/entities/GameSession';
 import type { GameSessionRepository } from '../../domain/repositories/GameSessionRepository';
+import type { WeekData } from '../../domain/services/GameSessionService';
 import { HttpClient } from '../http/HttpClient';
 import { endpoints } from '../api/config';
 
@@ -37,5 +38,13 @@ export class GameSessionApiRepository implements GameSessionRepository {
 
   async endSession(sessionId: string): Promise<void> {
     await this.httpClient.post(endpoints.sessionsEnd);
+  }
+
+  async getWeekData(week: number, sessionId: string): Promise<WeekData> {
+    return this.httpClient.get<WeekData>(endpoints.gmWeek(week), {
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      },
+    });
   }
 }

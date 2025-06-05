@@ -6,7 +6,7 @@
         <img src="/images/card-home/drakeHead.png" alt="Avatar" class="w-12 h-12 rounded-full" />
         <div class="flex flex-col">
           <h2 class="text-2xl font-bold text-gray-100">Username</h2>
-          <span class="text-gray-400">Week 1/5</span>
+          <span class="text-gray-400">Week {{ currentWeek }}/5</span>
         </div>
       </div>
       <div class="flex gap-6">
@@ -14,21 +14,21 @@
           <WalletIcon class="w-6 h-6 text-gray-400" />
           <div>
             <div class="text-sm text-gray-100">Balance</div>
-            <div class="text-xs text-gray-400">$10,000 USD</div>
+            <div class="text-xs text-gray-400">${{ cash.toFixed(2) }} USD</div>
           </div>
         </div>
         <div class="bg-gray-900 rounded p-2 flex items-center gap-2 w-44">
           <CircleStackIcon class="w-6 h-6 text-gray-400" />
           <div>
             <div class="text-sm text-gray-100">Stocks</div>
-            <div class="text-xs text-gray-400">$0.00 USD</div>
+            <div class="text-xs text-gray-400">${{ holdingsValue.toFixed(2) }} USD</div>
           </div>
         </div>
         <div class="bg-gray-900 rounded p-2 flex items-center gap-2 w-44">
           <CurrencyDollarIcon class="w-6 h-6 text-gray-400" />
           <div>
             <div class="text-sm text-gray-100">Total</div>
-            <div class="text-xs text-green-500">$10,000 USD</div>
+            <div class="text-xs text-green-500">${{ totalBalance.toFixed(2) }} USD</div>
           </div>
         </div>
       </div>
@@ -38,8 +38,8 @@
     <section class="px-16 py-12">
       <h2 class="text-2xl font-medium font-orbitron text-gray-400 mb-8">Market News</h2>
       <div class="grid grid-cols-3 gap-8">
-        <div v-for="i in 3" :key="i" class="bg-gray-800 rounded-lg shadow-sm p-3">
-          <p class="text-gray-100">Lorem ipsum dolor sit amet consectetur. Leo blandit vehicula velit non ut.</p>
+        <div v-for="(headline, i) in marketNews" :key="i" class="bg-gray-800 rounded-lg shadow-sm p-3">
+          <p class="text-gray-100">{{ headline }}</p>
         </div>
       </div>
     </section>
@@ -82,25 +82,25 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-700">
-            <tr v-for="(stock, index) in stocks" :key="index" class="text-gray-100 hover:bg-gray-700 transition-colors duration-150">
-              <td class="p-4">{{ stock.name }}</td>
+            <tr v-for="stock in availableStocks" :key="stock.ticker" class="text-gray-100 hover:bg-gray-700 transition-colors duration-150">
+              <td class="p-4">{{ stock.company }}</td>
               <td class="p-4">
                 <span class="text-green-400">{{ stock.ticker }}</span>
               </td>
               <td class="p-4">{{ stock.company }}</td>
-              <td class="p-4 font-bold">${{ stock.price }}</td>
+              <td class="p-4 font-bold">${{ stock.currentPrice.toFixed(2) }}</td>
               <td class="p-4">
                 <component 
-                  :is="stock.trend === 'up' ? ArrowUpCircleIcon : stock.trend === 'down' ? ArrowDownCircleIcon : MinusCircleIcon"
+                  :is="stock.change > 0 ? ArrowUpCircleIcon : stock.change < 0 ? ArrowDownCircleIcon : MinusCircleIcon"
                   class="w-6 h-6"
                   :class="{
-                    'text-green-500': stock.trend === 'up',
-                    'text-red-500': stock.trend === 'down',
-                    'text-gray-500': stock.trend === 'neutral'
+                    'text-green-500': stock.change > 0,
+                    'text-red-500': stock.change < 0,
+                    'text-gray-500': stock.change === 0
                   }"
                 />
               </td>
-              <td class="p-4">{{ stock.owned }}</td>
+              <td class="p-4">{{ holdings[stock.ticker] || 0 }}</td>
               <td class="p-4">
                 <div class="flex gap-2">
                   <button 
@@ -125,8 +125,17 @@
 
     <!-- Next Week Button -->
     <div class="px-16 pb-16">
-      <button class="bg-green-500 text-white px-8 py-3 rounded-md font-bold hover:bg-green-600 transition">
-        Go to next week
+      <button 
+        class="bg-green-500 text-white px-8 py-3 rounded-md font-bold hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        @click="handleNextWeek"
+        :disabled="isAdvancing"
+      >
+        <template v-if="isAdvancing">
+          {{ currentWeek === 5 ? 'Ending...' : 'Advancing...' }}
+        </template>
+        <template v-else>
+          {{ currentWeek === 5 ? 'End Session' : 'Next Week' }}
+        </template>
       </button>
     </div>
 
@@ -134,7 +143,8 @@
       :visible="isTradeModalVisible"
       :type="tradeType"
       :stock="selectedStock"
-      :balance="10000"
+      :cash="cash"
+      :holdings="holdings"
       @confirm="handleTradeConfirm"
       @cancel="closeTradeModal"
     />
@@ -142,7 +152,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useSessionStore } from '../stores/useSessionStore'
+import { GameSessionService } from '../domain/services/GameSessionService'
+import { GameSessionApiRepository } from '../infrastructure/repositories/GameSessionApiRepository'
+import { HttpClient } from '../infrastructure/http/HttpClient'
+import type { Stock, StockRecommendation } from '../modules/stocks/domain/models/Stock'
 import {
   WalletIcon,
   CircleStackIcon,
@@ -153,33 +169,18 @@ import {
 } from '@heroicons/vue/24/outline'
 import TradeModal from '../components/TradeModal.vue'
 
-// Mock data for stocks table
-const stocks = ref([
-  {
-    name: 'JPMorgan Chase',
-    ticker: 'JPM',
-    company: 'JPMorgan Chase & Co.',
-    price: '148.25',
-    trend: 'up',
-    owned: 0
-  },
-  {
-    name: 'JPMorgan Chase',
-    ticker: 'JPM',
-    company: 'JPMorgan Chase & Co.',
-    price: '148.25',
-    trend: 'down',
-    owned: 0
-  },
-  {
-    name: 'JPMorgan Chase',
-    ticker: 'JPM',
-    company: 'JPMorgan Chase & Co.',
-    price: '148.25',
-    trend: 'neutral',
-    owned: 0
-  }
-])
+const router = useRouter()
+const sessionStore = useSessionStore()
+const gameSessionService = new GameSessionService(new GameSessionApiRepository(new HttpClient()))
+
+// State
+const cash = ref(0)
+const holdingsValue = ref(0)
+const totalBalance = ref(0)
+const currentWeek = ref(1)
+const marketNews = ref<string[]>([])
+const availableStocks = ref<Stock[]>([])
+const holdings = ref<Record<string, number>>({})
 
 // Trade modal state
 const isTradeModalVisible = ref(false)
@@ -189,25 +190,155 @@ const selectedStock = ref({
   ticker: '',
   price: 0
 })
+const isTrading = ref(false)
+const tradeError = ref<string | null>(null)
+const isAdvancing = ref(false)
 
-const openTradeModal = (stock: any, type: 'buy' | 'sell') => {
+onMounted(async () => {
+  try {
+    // Check if session exists
+    if (!sessionStore.sessionId) {
+      router.push('/')
+      return
+    }
+
+    // Get session state
+    const sessionState = await gameSessionService.getSessionState()
+    cash.value = sessionState.cash
+    holdingsValue.value = sessionState.holdings_value
+    totalBalance.value = sessionState.total_balance
+    holdings.value = Object.fromEntries(
+      Object.entries(sessionState.metadata.holdings).map(([ticker, info]) => [ticker, info.quantity])
+    )
+
+    // Extract week number from status
+    const weekMatch = sessionState.status.match(/week(\d+)/)
+    if (weekMatch) {
+      currentWeek.value = parseInt(weekMatch[1])
+      
+      // Get week data
+      const weekData = await gameSessionService.getWeekData(currentWeek.value)
+      marketNews.value = weekData.headlines
+      availableStocks.value = weekData.stocks.map(stock => ({
+        id: stock.ticker,
+        ticker: stock.ticker,
+        company: stock.ticker,
+        currentPrice: stock.price,
+        previousClose: stock.price,
+        change: 0,
+        changePercent: 0,
+        recommendation: stock.rating_to as StockRecommendation,
+        updatedAt: new Date().toISOString()
+      }))
+    } else {
+      throw new Error('Invalid week format')
+    }
+  } catch (error) {
+    console.error('Failed to load game state:', error)
+    sessionStore.setSessionId('')
+    router.push('/')
+  }
+})
+
+const openTradeModal = (stock: Stock, type: 'buy' | 'sell') => {
   selectedStock.value = {
-    name: stock.name,
+    name: stock.company,
     ticker: stock.ticker,
-    price: Number(stock.price)
+    price: stock.currentPrice
   }
   tradeType.value = type
   isTradeModalVisible.value = true
+  tradeError.value = null
 }
 
 const closeTradeModal = () => {
   isTradeModalVisible.value = false
+  tradeError.value = null
 }
 
-const handleTradeConfirm = ({ shares }: { shares: number }) => {
-  // TODO: Implement trade logic here
-  console.log(`${tradeType.value} ${shares} shares of ${selectedStock.value.ticker}`)
-  closeTradeModal()
+const handleTradeConfirm = async ({ ticker, quantity, type }: { ticker: string; quantity: number; type: 'buy' | 'sell' }) => {
+  if (isTrading.value) return
+  
+  isTrading.value = true
+  tradeError.value = null
+  
+  try {
+    if (type === 'buy') {
+      await gameSessionService.buyStocks({
+        ticker,
+        quantity
+      })
+    } else {
+      await gameSessionService.sellStocks({
+        ticker,
+        quantity
+      })
+    }
+    
+    // Refresh session state after trade
+    const sessionState = await gameSessionService.getSessionState()
+    cash.value = sessionState.cash
+    holdingsValue.value = sessionState.holdings_value
+    totalBalance.value = sessionState.total_balance
+    holdings.value = Object.fromEntries(
+      Object.entries(sessionState.metadata.holdings).map(([ticker, info]) => [ticker, info.quantity])
+    )
+    
+    closeTradeModal()
+  } catch (error) {
+    console.error('Trade failed:', error)
+    tradeError.value = 'Transaction failed. Please try again.'
+  } finally {
+    isTrading.value = false
+  }
+}
+
+const handleNextWeek = async () => {
+  if (isAdvancing.value) return
+
+  isAdvancing.value = true
+  try {
+    if (currentWeek.value === 5) {
+      await gameSessionService.endSession()
+      router.push('/results')
+    } else {
+      await gameSessionService.advanceWeek()
+      
+      // Reload session state and week data
+      const sessionState = await gameSessionService.getSessionState()
+      cash.value = sessionState.cash
+      holdingsValue.value = sessionState.holdings_value
+      totalBalance.value = sessionState.total_balance
+      holdings.value = Object.fromEntries(
+        Object.entries(sessionState.metadata.holdings).map(([ticker, info]) => [ticker, info.quantity])
+      )
+
+      // Extract week number and load new week data
+      const weekMatch = sessionState.status.match(/week(\d+)/)
+      if (weekMatch) {
+        currentWeek.value = parseInt(weekMatch[1])
+        const weekData = await gameSessionService.getWeekData(currentWeek.value)
+        marketNews.value = weekData.headlines
+        availableStocks.value = weekData.stocks.map(stock => ({
+          id: stock.ticker,
+          ticker: stock.ticker,
+          company: stock.ticker,
+          currentPrice: stock.price,
+          previousClose: stock.price,
+          change: 0,
+          changePercent: 0,
+          recommendation: stock.rating_to as StockRecommendation,
+          updatedAt: new Date().toISOString()
+        }))
+      }
+    }
+  } catch (error) {
+    console.error('Failed to advance week:', error)
+    sessionStore.setSessionId('')
+    router.push('/')
+  } finally {
+    isAdvancing.value = false
+  }
 }
 </script>
 

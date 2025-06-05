@@ -11,27 +11,65 @@ interface Props {
   visible: boolean
   type: 'buy' | 'sell'
   stock: Stock
-  balance: number
+  cash: number
+  holdings: Record<string, number>
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
-  confirm: [{ shares: number }]
+  confirm: [{ ticker: string; quantity: number; type: 'buy' | 'sell' }]
   cancel: []
 }>()
 
 const shares = ref<number>(0)
+const isLoading = ref(false)
+const error = ref<string | null>(null)
 
 const total = computed(() => {
   return shares.value * props.stock.price
 })
 
-const handleConfirm = () => {
-  emit('confirm', { shares: shares.value })
+const hasError = computed(() => {
+  if (!shares.value || shares.value <= 0) {
+    return 'Please enter a valid number of shares'
+  }
+  
+  if (props.type === 'buy' && total.value > props.cash) {
+    return 'Insufficient funds for this purchase'
+  }
+  
+  if (props.type === 'sell') {
+    const currentHoldings = props.holdings[props.stock.ticker] || 0
+    if (shares.value > currentHoldings) {
+      return `You only own ${currentHoldings} shares`
+    }
+  }
+  
+  return null
+})
+
+const handleConfirm = async () => {
+  if (hasError.value || isLoading.value) return
+  
+  isLoading.value = true
+  error.value = null
+  
+  try {
+    emit('confirm', {
+      ticker: props.stock.ticker,
+      quantity: shares.value,
+      type: props.type
+    })
+  } catch (e) {
+    error.value = 'Transaction failed. Please try again.'
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const handleCancel = () => {
   shares.value = 0
+  error.value = null
   emit('cancel')
 }
 
@@ -45,6 +83,7 @@ const formatUSD = (value: number) => {
 const handleInput = (event: Event) => {
   const input = event.target as HTMLInputElement
   input.value = input.value.replace(/\D/g, '')
+  error.value = null
 }
 </script>
 
@@ -78,13 +117,17 @@ const handleInput = (event: Event) => {
             </div>
             <div class="flex justify-between">
               <span class="text-gray-400">Your balance:</span>
-              <span class="text-gray-200">{{ formatUSD(balance) }}</span>
+              <span class="text-gray-200">{{ formatUSD(cash) }}</span>
+            </div>
+            <div v-if="type === 'sell'" class="flex justify-between">
+              <span class="text-gray-400">You own:</span>
+              <span class="text-gray-200">{{ holdings[stock.ticker] || 0 }} shares</span>
             </div>
           </div>
 
           <div class="space-y-2">
             <label class="block text-sm font-medium text-gray-400">
-              Number of shares to buy
+              Number of shares to {{ type === 'buy' ? 'buy' : 'sell' }}
             </label>
             <input
               type="number"
@@ -92,7 +135,9 @@ const handleInput = (event: Event) => {
               min="0"
               step="1"
               class="bg-[#1F2937] text-white border border-gray-500 rounded-md p-2 w-full"
+              :class="{ 'border-red-500': hasError }"
               @input="handleInput"
+              :disabled="isLoading"
             />
             <p class="text-sm text-gray-400">No decimals allowed</p>
           </div>
@@ -102,16 +147,28 @@ const handleInput = (event: Event) => {
             <span class="text-gray-200">{{ formatUSD(total) }}</span>
           </div>
 
+          <div v-if="hasError || error" class="bg-red-900/20 border border-red-800 rounded-lg p-3">
+            <p class="text-red-400 text-sm">{{ hasError || error }}</p>
+          </div>
+
           <div class="flex gap-3 mt-6">
             <button
-              class="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md"
+              class="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               @click="handleConfirm"
+              :disabled="!!hasError || isLoading"
             >
-              Confirm {{ type === 'buy' ? 'Purchase' : 'Sale' }}
+              <template v-if="isLoading">
+                <span class="inline-block animate-spin mr-2">⟳</span>
+                Processing...
+              </template>
+              <template v-else>
+                Confirm {{ type === 'buy' ? 'Purchase' : 'Sale' }}
+              </template>
             </button>
             <button
-              class="flex-1 border border-gray-400 text-white font-medium py-2 px-4 rounded-md hover:bg-[#1F2937]"
+              class="flex-1 border border-gray-400 text-white font-medium py-2 px-4 rounded-md hover:bg-[#1F2937] disabled:opacity-50 disabled:cursor-not-allowed"
               @click="handleCancel"
+              :disabled="isLoading"
             >
               Cancel
             </button>
