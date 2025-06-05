@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useSessionStore } from '../stores/useSessionStore'
+import { GameSessionService } from '../domain/services/GameSessionService'
+import { GameSessionApiRepository } from '../infrastructure/repositories/GameSessionApiRepository'
+import { HttpClient } from '../infrastructure/http/HttpClient'
 import {
-  AcademicCapIcon,
   BeakerIcon,
   BoltIcon,
   BuildingLibraryIcon,
@@ -17,6 +21,11 @@ import {
 } from '@heroicons/vue/24/outline'
 import LoadingModal from '../components/LoadingModal.vue'
 
+// Initialize game service
+const httpClient = new HttpClient()
+const repository = new GameSessionApiRepository(httpClient)
+const gameService = new GameSessionService(repository)
+
 interface StockCategory {
   id: number
   name: string
@@ -28,6 +37,9 @@ interface StockCategory {
 const playerName = ref('')
 const selectedCategories = ref<number[]>([])
 const showLoading = ref(false)
+
+const router = useRouter()
+const sessionStore = useSessionStore()
 
 const stockCategories = ref<StockCategory[]>([
   { id: 1, name: 'Trending', description: 'Most popular stock of the moment', icon: ChartBarIcon, selected: false },
@@ -55,18 +67,25 @@ const toggleCategory = (categoryId: number) => {
   }
 }
 
-const startPlaying = () => {
+const startPlaying = async () => {
   if (playerName.value.trim() && selectedCategories.value.length === 3) {
     showLoading.value = true
-    // TODO: Handle game start
-    console.log('Starting game with:', { playerName: playerName.value, categories: selectedCategories.value })
+    try {
+      const response = await gameService.createSession({
+        username: playerName.value,
+        categories: selectedCategories.value.map(id => id.toString())
+      })
+      
+      sessionStore.setSessionId(response.sessionId)
+      await router.push('/week')
+    } catch (error) {
+      console.error('Error creating session:', error)
+      showLoading.value = false
+    }
   }
 }
 
-// Add a computed property for button state
-const isFormValid = computed(() => {
-  return playerName.value.trim() && selectedCategories.value.length === 3
-})
+
 </script>
 
 <template>

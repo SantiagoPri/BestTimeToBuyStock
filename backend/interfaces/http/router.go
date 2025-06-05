@@ -40,8 +40,15 @@ func NewRouter(
 func (r *Router) SetupRoutes() *gin.Engine {
 	router := gin.Default()
 
-	// Apply CORS middleware
-	router.Use(cors.Default())
+	// Apply CORS middleware with custom configuration
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173", "http://127.0.0.1:5173"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * 60 * 60, // 12 hours
+	}))
 
 	api := router.Group("/api")
 
