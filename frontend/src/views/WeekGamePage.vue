@@ -1,5 +1,10 @@
 <template>
   <div class="min-h-screen bg-gray-900 bg-[url('/images/card-home/background-stars.png')] bg-cover">
+    <Toast 
+      :visible="showToast"
+      :message="toastMessage"
+      @close="closeToast"
+    />
     <!-- Top Bar -->
     <header class="flex justify-between items-center px-16 py-6">
       <div class="flex items-center gap-4">
@@ -168,6 +173,7 @@ import {
   MinusCircleIcon
 } from '@heroicons/vue/24/outline'
 import TradeModal from '../components/TradeModal.vue'
+import Toast from '../components/Toast.vue'
 
 const router = useRouter()
 const sessionStore = useSessionStore()
@@ -193,6 +199,14 @@ const selectedStock = ref({
 const isTrading = ref(false)
 const tradeError = ref<string | null>(null)
 const isAdvancing = ref(false)
+
+// Toast state
+const showToast = ref(false)
+const toastMessage = ref('')
+
+const closeToast = () => {
+  showToast.value = false
+}
 
 onMounted(async () => {
   try {
@@ -268,11 +282,13 @@ const handleTradeConfirm = async ({ ticker, quantity, type }: { ticker: string; 
         ticker,
         quantity
       })
+      toastMessage.value = "You've successfully bought it!"
     } else {
       await gameSessionService.sellStocks({
         ticker,
         quantity
       })
+      toastMessage.value = "You've successfully sold it!"
     }
     
     // Refresh session state after trade
@@ -285,6 +301,10 @@ const handleTradeConfirm = async ({ ticker, quantity, type }: { ticker: string; 
     )
     
     closeTradeModal()
+    showToast.value = true
+    setTimeout(() => {
+      showToast.value = false
+    }, 3000)
   } catch (error) {
     console.error('Trade failed:', error)
     tradeError.value = 'Transaction failed. Please try again.'

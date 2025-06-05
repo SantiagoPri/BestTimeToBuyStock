@@ -92,16 +92,33 @@ const tips = [
 
 <template>
   <div class="min-h-screen bg-[url('/images/card-home/background-stars.png')] bg-cover bg-center bg-gray-900">
-    <div class="flex flex-col items-center py-24 px-16">
-      <!-- Header -->
-      <div class="text-center mb-12">
-        <h1 class="font-orbitron text-3xl text-white mb-4">The Game Master Has Spoken!</h1>
-        <p class="text-gray-400 text-lg">Let's see how you did...</p>
+    <!-- Header with background -->
+    <div class="w-full h-[456px] bg-[url('/images/card-home/header-background.png')] bg-cover bg-center bg-black/60">
+      <!-- Logo -->
+      <div class="container mx-auto px-16 pt-6">
+        <div class="w-[120px] h-[120px] rounded-[187.5px] bg-[#1C2431] flex items-center justify-center">
+          <img 
+            src="/images/card-home/drake-gm-1.png" 
+            alt="Dragon Game Master Logo" 
+            class="w-[119px] h-[93px] object-contain mt-[15px]"
+          />
+        </div>
       </div>
+      
+      <div class="container mx-auto px-16 pt-12">
+        <!-- Header Text -->
+        <div class="text-center mb-12">
+          <h1 class="font-orbitron text-3xl text-white mb-4">The Game Master Has Spoken!</h1>
+          <p class="text-gray-400 text-lg">Let's see how you did...</p>
+        </div>
+      </div>
+    </div>
 
+    <!-- Content Section -->
+    <div class="container mx-auto px-16 pt-16">
       <!-- Result Card -->
       <div 
-        class="max-w-4xl w-full p-12 rounded-lg border mb-16"
+        class="max-w-4xl w-full p-12 rounded-lg border mb-16 mx-auto"
         :class="[statusConfig.bgColor, statusConfig.borderColor]"
       >
         <p class="text-2xl text-white text-center font-bold mb-6">{{ statusConfig.message }}</p>
@@ -116,7 +133,7 @@ const tips = [
       </div>
 
       <!-- Summary Section -->
-      <h2 class="font-orbitron text-2xl text-white mb-8">Your investment summary</h2>
+      <h2 class="font-orbitron text-2xl text-white mb-8 text-center">Your investment summary</h2>
       <div class="flex gap-6 flex-wrap justify-center mb-16">
         <SummaryStat
           :icon="WalletIcon"
@@ -137,8 +154,8 @@ const tips = [
       </div>
 
       <!-- Tips Section -->
-      <h2 class="font-orbitron text-2xl text-white mb-8">Tips for your next game</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mb-16">
+      <h2 class="font-orbitron text-2xl text-white mb-8 text-center">Tips for your next game</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-16">
         <ResultCard
           v-for="tip in tips"
           :key="tip.description"
@@ -147,13 +164,20 @@ const tips = [
         />
       </div>
 
-      <!-- Action Button -->
-      <button
-        class="px-8 py-3 border-2 border-white/15 rounded-md text-white hover:bg-white/5 transition-colors"
-        @click="emit('navigate', '/settings')"
-      >
-        Back home
-      </button>
+      <!-- Coin GIF and Action Button -->
+      <div class="flex flex-col items-center gap-6 py-12">
+        <img 
+          src="/images/card-home/coin-gift.gif" 
+          alt="Coin animation" 
+          class="w-24 h-24 mb-4"
+        />
+        <button
+          class="px-8 py-3 border-2 border-white/15 rounded-md text-white hover:bg-white/5 transition-colors"
+          @click="emit('navigate', '/settings')"
+        >
+          Back home
+        </button>
+      </div>
     </div>
   </div>
 </template> 
