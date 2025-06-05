@@ -15,6 +15,7 @@ import {
   SparklesIcon,
   WrenchScrewdriverIcon
 } from '@heroicons/vue/24/outline'
+import LoadingModal from '../components/LoadingModal.vue'
 
 interface StockCategory {
   id: number
@@ -26,6 +27,7 @@ interface StockCategory {
 
 const playerName = ref('')
 const selectedCategories = ref<number[]>([])
+const showLoading = ref(false)
 
 const stockCategories = ref<StockCategory[]>([
   { id: 1, name: 'Trending', description: 'Most popular stock of the moment', icon: ChartBarIcon, selected: false },
@@ -55,6 +57,7 @@ const toggleCategory = (categoryId: number) => {
 
 const startPlaying = () => {
   if (playerName.value.trim() && selectedCategories.value.length === 3) {
+    showLoading.value = true
     // TODO: Handle game start
     console.log('Starting game with:', { playerName: playerName.value, categories: selectedCategories.value })
   }
@@ -68,6 +71,7 @@ const isFormValid = computed(() => {
 
 <template>
   <div class="min-h-screen bg-[#444444] bg-cover bg-center" style="background-image: url('/images/card-home/background-stars.png')">
+    <LoadingModal v-if="showLoading" />
     <div class="container mx-auto px-4 py-8 md:py-16">
       <!-- Header -->
       <header class="flex items-center gap-6 mb-16">
