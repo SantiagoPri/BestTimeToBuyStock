@@ -3,6 +3,7 @@ import StockListView from '../../modules/stocks/presentation/views/StockListView
 import SettingsPage from '../../views/SettingsPage.vue';
 import Home from '../../components/Home.vue';
 import WeekGamePage from '../../views/WeekGamePage.vue';
+import GameResultsPage from '../../views/GameResultsPage.vue';
 
 const routes = [
   {
@@ -28,6 +29,12 @@ const routes = [
     path: '/week',
     name: 'week',
     component: WeekGamePage,
+  },
+  {
+    path: '/results',
+    name: 'results',
+    component: GameResultsPage,
+    props: true, // This allows passing route params as props
   },
 ];
 

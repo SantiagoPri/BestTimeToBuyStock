@@ -103,10 +103,16 @@
               <td class="p-4">{{ stock.owned }}</td>
               <td class="p-4">
                 <div class="flex gap-2">
-                  <button class="bg-green-500 text-white px-8 py-2 rounded-md font-bold hover:bg-green-600 transition">
+                  <button 
+                    class="bg-green-500 text-white px-8 py-2 rounded-md font-bold hover:bg-green-600 transition"
+                    @click="openTradeModal(stock, 'buy')"
+                  >
                     Buy
                   </button>
-                  <button class="border-2 border-white border-opacity-15 text-white px-8 py-2 rounded-md font-bold hover:bg-gray-700 transition">
+                  <button 
+                    class="border-2 border-white border-opacity-15 text-white px-8 py-2 rounded-md font-bold hover:bg-gray-700 transition"
+                    @click="openTradeModal(stock, 'sell')"
+                  >
                     Sell
                   </button>
                 </div>
@@ -123,6 +129,15 @@
         Go to next week
       </button>
     </div>
+
+    <TradeModal
+      :visible="isTradeModalVisible"
+      :type="tradeType"
+      :stock="selectedStock"
+      :balance="10000"
+      @confirm="handleTradeConfirm"
+      @cancel="closeTradeModal"
+    />
   </div>
 </template>
 
@@ -136,6 +151,7 @@ import {
   ArrowDownCircleIcon,
   MinusCircleIcon
 } from '@heroicons/vue/24/outline'
+import TradeModal from '../components/TradeModal.vue'
 
 // Mock data for stocks table
 const stocks = ref([
@@ -164,6 +180,35 @@ const stocks = ref([
     owned: 0
   }
 ])
+
+// Trade modal state
+const isTradeModalVisible = ref(false)
+const tradeType = ref<'buy' | 'sell'>('buy')
+const selectedStock = ref({
+  name: '',
+  ticker: '',
+  price: 0
+})
+
+const openTradeModal = (stock: any, type: 'buy' | 'sell') => {
+  selectedStock.value = {
+    name: stock.name,
+    ticker: stock.ticker,
+    price: Number(stock.price)
+  }
+  tradeType.value = type
+  isTradeModalVisible.value = true
+}
+
+const closeTradeModal = () => {
+  isTradeModalVisible.value = false
+}
+
+const handleTradeConfirm = ({ shares }: { shares: number }) => {
+  // TODO: Implement trade logic here
+  console.log(`${tradeType.value} ${shares} shares of ${selectedStock.value.ticker}`)
+  closeTradeModal()
+}
 </script>
 
 <style scoped>
