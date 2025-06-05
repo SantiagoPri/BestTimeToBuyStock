@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 defineProps<{
   title?: string;
 }>();
 
+const router = useRouter();
 const isLoggedIn = ref(false); // This would come from your auth store in a real app
+
+const goToSettings = () => {
+  router.push('/settings');
+};
 </script>
 
 <template>
@@ -29,6 +35,7 @@ const isLoggedIn = ref(false); // This would come from your auth store in a real
       <div v-if="!isLoggedIn" class="flex flex-col items-start gap-2">
         <p class="font-bold text-[14.875px] text-[#22C55E]">Already know the game?</p>
         <button
+          @click="goToSettings"
           class="px-8 py-3 h-[40px] border-2 border-[rgba(255,255,255,0.15)] rounded-[6px] text-[#E1E1E1] hover:bg-gray-700/20 transition-colors text-[17.3px]"
         >
           Play now!

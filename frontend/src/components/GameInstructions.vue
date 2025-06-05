@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router';
+
 interface Instruction {
   step: number;
   title: string;
@@ -8,6 +10,11 @@ interface Instruction {
 defineProps<{
   instructions?: Instruction[];
 }>();
+
+const router = useRouter();
+const goToSettings = () => {
+  router.push('/settings');
+};
 
 const defaultInstructions: Instruction[] = [
   {
@@ -64,7 +71,10 @@ const defaultInstructions: Instruction[] = [
       <h3 class="text-[17.578125px] font-bold text-[#E1E1E1] leading-[1.59]">Are you ready?</h3>
       <img src="/images/card-home/coin-gift.gif" alt="Coin Gift" class="w-[100px] h-[100px] mx-auto" />
       <p class="text-[15.75px] text-[#D1D5DB] leading-[1.52]">Master the markets and climb the leaderboard!</p>
-      <button class="w-fit mx-auto bg-[#22C55E] text-[#E1E1E1] py-3 px-8 rounded-[6px] hover:bg-emerald-600 transition-colors text-[17.296875px] leading-[1.62] font-normal">
+      <button 
+        @click="goToSettings"
+        class="w-fit mx-auto bg-[#22C55E] text-[#E1E1E1] py-3 px-8 rounded-[6px] hover:bg-emerald-600 transition-colors text-[17.296875px] leading-[1.62] font-normal"
+      >
         Start
       </button>
     </div>
