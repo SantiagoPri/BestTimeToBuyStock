@@ -21,23 +21,43 @@ export class GameSessionApiRepository implements GameSessionRepository {
   }
 
   async getSessionState(sessionId: string): Promise<GameSession> {
-    return this.httpClient.get<GameSession>(endpoints.sessionsState);
+    return this.httpClient.get<GameSession>(endpoints.sessionsState, {
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      },
+    });
   }
 
   async buyStocks(sessionId: string, request: TradeRequest): Promise<void> {
-    await this.httpClient.post(endpoints.sessionsBuy, request);
+    await this.httpClient.post(endpoints.sessionsBuy, request, {
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      },
+    });
   }
 
   async sellStocks(sessionId: string, request: TradeRequest): Promise<void> {
-    await this.httpClient.post(endpoints.sessionsSell, request);
+    await this.httpClient.post(endpoints.sessionsSell, request, {
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      },
+    });
   }
 
   async advanceWeek(sessionId: string): Promise<void> {
-    await this.httpClient.post(endpoints.sessionsAdvance);
+    await this.httpClient.post(endpoints.sessionsAdvance, {
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      },
+    });
   }
 
   async endSession(sessionId: string): Promise<void> {
-    await this.httpClient.post(endpoints.sessionsEnd);
+    await this.httpClient.post(endpoints.sessionsEnd, {
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      },
+    });
   }
 
   async getWeekData(week: number, sessionId: string): Promise<WeekData> {
