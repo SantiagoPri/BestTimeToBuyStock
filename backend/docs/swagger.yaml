@@ -143,7 +143,11 @@ definitions:
     properties:
       action:
         type: string
+      company_name:
+        type: string
       price:
+        type: number
+      price_change:
         type: number
       rating_from:
         type: string
@@ -349,8 +353,10 @@ paths:
     post:
       description: Ends the current session, selling all holdings at current prices
       responses:
-        "200":
+        "202":
           description: Session ended successfully
+          schema:
+            $ref: '#/definitions/game_session.GameSession'
         "400":
           description: Can only end session in week 5
           schema:

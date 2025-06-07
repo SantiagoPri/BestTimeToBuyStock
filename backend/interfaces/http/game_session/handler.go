@@ -214,7 +214,7 @@ func (h *Handler) AdvanceWeek(c *gin.Context) {
 // @Description Ends the current session, selling all holdings at current prices
 // @Tags Game Session
 // @Security BearerAuth
-// @Success 200 "Session ended successfully"
+// @Success 202 {object} game_session.GameSession "Session ended successfully"
 // @Failure 401 {object} errors.Error "Unauthorized - Invalid session"
 // @Failure 400 {object} errors.Error "Can only end session in week 5"
 // @Router /sessions/end [post]
@@ -225,12 +225,13 @@ func (h *Handler) EndSession(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.EndSession(sessionID); err != nil {
+	gameSession, err := h.service.EndSession(sessionID)
+	if err != nil {
 		_ = c.Error(err)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	c.JSON(http.StatusAccepted, gameSession)
 }
 
 func extractBearerToken(c *gin.Context) string {

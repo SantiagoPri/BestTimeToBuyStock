@@ -312,8 +312,11 @@ const docTemplate = `{
                 ],
                 "summary": "End session",
                 "responses": {
-                    "200": {
-                        "description": "Session ended successfully"
+                    "202": {
+                        "description": "Session ended successfully",
+                        "schema": {
+                            "$ref": "#/definitions/game_session.GameSession"
+                        }
                     },
                     "400": {
                         "description": "Can only end session in week 5",
@@ -729,7 +732,13 @@ const docTemplate = `{
                 "action": {
                     "type": "string"
                 },
+                "company_name": {
+                    "type": "string"
+                },
                 "price": {
+                    "type": "number"
+                },
+                "price_change": {
                     "type": "number"
                 },
                 "rating_from": {

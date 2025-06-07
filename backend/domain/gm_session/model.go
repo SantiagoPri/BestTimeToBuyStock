@@ -15,9 +15,11 @@ type GMWeekData struct {
 }
 
 type StockWeekInsight struct {
-	Ticker     string  `json:"ticker"`
-	RatingFrom string  `json:"rating_from"`
-	RatingTo   string  `json:"rating_to"`
-	Action     string  `json:"action"`
-	Price      float64 `json:"price"`
+	Ticker      string  `json:"ticker"`
+	CompanyName string  `json:"company_name"`
+	RatingFrom  string  `json:"rating_from"`
+	RatingTo    string  `json:"rating_to"`
+	Action      string  `json:"action"`
+	Price       float64 `json:"price"`
+	PriceChange float64 `json:"price_change"`
 }

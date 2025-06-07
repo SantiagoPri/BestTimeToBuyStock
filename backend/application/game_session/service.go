@@ -21,7 +21,7 @@ type Service interface {
 	Buy(sessionID string, ticker string, quantity int) error
 	Sell(sessionID string, ticker string, quantity int) error
 	AdvanceWeek(sessionID string) error
-	EndSession(sessionID string) error
+	EndSession(sessionID string) (*game_session.GameSession, error)
 	SaveGMWeekData(sessionID string, gmData map[string]*gm_session.GMWeekData) error
 	GetWeekData(sessionID string, week int) (*gm_session.GMWeekData, error)
 }
@@ -357,10 +357,10 @@ func (s *service) AdvanceWeek(sessionID string) error {
 	return nil
 }
 
-func (s *service) EndSession(sessionID string) error {
+func (s *service) EndSession(sessionID string) (*game_session.GameSession, error) {
 	tx, err := s.repo.BeginTransaction(sessionID)
 	if err != nil {
-		return errors.Wrap(errors.ErrInternal, "failed to begin transaction", err)
+		return nil, errors.Wrap(errors.ErrInternal, "failed to begin transaction", err)
 	}
 	defer tx.Rollback()
 
@@ -368,16 +368,16 @@ func (s *service) EndSession(sessionID string) error {
 
 	currentWeek, err := getCurrentWeek(session.Status)
 	if err != nil {
-		return errors.Wrap(errors.ErrInvalidInput, "failed to get current week", err)
+		return nil, errors.Wrap(errors.ErrInvalidInput, "failed to get current week", err)
 	}
 
 	if currentWeek != 5 {
-		return errors.New(errors.ErrInvalidInput, fmt.Sprintf("can only end session in week 5, current week: %d", currentWeek))
+		return nil, errors.New(errors.ErrInvalidInput, fmt.Sprintf("can only end session in week 5, current week: %d", currentWeek))
 	}
 
 	gmData, err := s.gmService.GetWeekData(sessionID, currentWeek)
 	if err != nil {
-		return errors.Wrap(errors.ErrInternal, "failed to get GM week data", err)
+		return nil, errors.Wrap(errors.ErrInternal, "failed to get GM week data", err)
 	}
 
 	for ticker, holding := range session.Metadata.Holdings {
@@ -400,14 +400,14 @@ func (s *service) EndSession(sessionID string) error {
 	session.UpdatedAt = time.Now().Format(time.RFC3339)
 
 	if err := tx.Update(session); err != nil {
-		return errors.Wrap(errors.ErrInternal, "failed to update session", err)
+		return nil, errors.Wrap(errors.ErrInternal, "failed to update session", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return errors.Wrap(errors.ErrInternal, "failed to commit transaction", err)
+		return nil, errors.Wrap(errors.ErrInternal, "failed to commit transaction", err)
 	}
 
-	return nil
+	return session, nil
 }
 
 func (s *service) SaveGMWeekData(sessionID string, gmData map[string]*gm_session.GMWeekData) error {
