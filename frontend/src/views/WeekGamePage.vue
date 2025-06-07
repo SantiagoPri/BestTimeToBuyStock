@@ -183,10 +183,12 @@ import {
 } from '@heroicons/vue/24/outline'
 import TradeModal from '../components/TradeModal.vue'
 import Toast from '../components/Toast.vue'
+import { useGameResultsStore } from '../stores/useGameResultsStore'
 
 const router = useRouter()
 const sessionStore = useSessionStore()
 const gameSessionService = new GameSessionService(new GameSessionApiRepository(new HttpClient()))
+const gameResultsStore = useGameResultsStore()
 
 // State
 const cash = ref(0)
@@ -327,7 +329,8 @@ const handleNextWeek = async () => {
   isAdvancing.value = true
   try {
     if (currentWeek.value === 5) {
-      await gameSessionService.endSession()
+      const results = await gameSessionService.endSession()
+      gameResultsStore.setResults(results)
       router.push('/results')
     } else {
       await gameSessionService.advanceWeek()

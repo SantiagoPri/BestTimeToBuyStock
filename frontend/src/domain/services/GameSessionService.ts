@@ -16,6 +16,13 @@ export interface WeekData {
   stocks: ApiStock[];
 }
 
+interface GameResults {
+  cash: number;
+  status: string;
+  total_balance: number;
+  username: string;
+}
+
 export class GameSessionService {
   constructor(private readonly repository: GameSessionRepository) {}
 
@@ -61,13 +68,14 @@ export class GameSessionService {
     await this.repository.advanceWeek(sessionId);
   }
 
-  async endSession(): Promise<void> {
+  async endSession(): Promise<GameResults> {
     const sessionId = localStorage.getItem('sessionId');
     if (!sessionId) {
       throw new Error('No active session');
     }
-    await this.repository.endSession(sessionId);
+    const results = await this.repository.endSession(sessionId);
     localStorage.removeItem('sessionId');
+    return results;
   }
 
   async getWeekData(week: number): Promise<WeekData> {

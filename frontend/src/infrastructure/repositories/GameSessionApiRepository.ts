@@ -9,6 +9,13 @@ import type { WeekData } from '../../domain/services/GameSessionService';
 import { HttpClient } from '../http/HttpClient';
 import { endpoints } from '../api/config';
 
+interface GameResults {
+  cash: number;
+  status: string;
+  total_balance: number;
+  username: string;
+}
+
 export class GameSessionApiRepository implements GameSessionRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
@@ -52,8 +59,8 @@ export class GameSessionApiRepository implements GameSessionRepository {
     });
   }
 
-  async endSession(sessionId: string): Promise<void> {
-    await this.httpClient.post(endpoints.sessionsEnd, {
+  async endSession(sessionId: string): Promise<GameResults> {
+    return this.httpClient.post<GameResults>(endpoints.sessionsEnd, undefined, {
       headers: {
         Authorization: `Bearer ${sessionId}`,
       },

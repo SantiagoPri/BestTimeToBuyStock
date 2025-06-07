@@ -36,7 +36,7 @@ const goToSettings = () => {
         <p class="font-bold text-[14.875px] text-[#22C55E]">Already know the game?</p>
         <button
           @click="goToSettings"
-          class="px-8 py-3 h-[40px] border-2 border-[rgba(255,255,255,0.15)] rounded-[6px] text-[#E1E1E1] hover:bg-gray-700/20 transition-colors text-[17.3px]"
+          class="px-8 py-3 h-[40px] border-2 border-[rgba(255,255,255,0.15)] rounded-[6px] text-[#E1E1E1] transition-all duration-200 text-[17.3px] flex items-center justify-center hover:border-[#60E491] hover:bg-white/5"
         >
           Play now!
         </button>

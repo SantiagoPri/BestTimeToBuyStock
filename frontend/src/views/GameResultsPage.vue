@@ -1,21 +1,31 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useGameResultsStore } from '../stores/useGameResultsStore';
 import { WalletIcon, PresentationChartLineIcon, CurrencyDollarIcon, ChartBarIcon, NewspaperIcon, ScaleIcon, ClockIcon } from '@heroicons/vue/24/outline';
 import SummaryStat from '../components/SummaryStat.vue';
 import ResultCard from '../components/ResultCard.vue';
 
-interface Props {
-  status: 'win' | 'lose' | 'neutral';
-  initialBalance: number;
-  finalBalance: number;
-}
+const router = useRouter();
+const gameResultsStore = useGameResultsStore();
 
-const props = defineProps<Props>();
-const emit = defineEmits<{
-  (e: 'navigate', path: string): void;
-}>();
+onMounted(() => {
+  // If no results are available, redirect to home
+  if (!gameResultsStore.results) {
+    router.push('/');
+    return;
+  }
+});
 
-const difference = computed(() => props.finalBalance - props.initialBalance);
+const status = computed(() => {
+  if (!gameResultsStore.results) return 'neutral';
+  return gameResultsStore.results.total_balance > 10000 ? 'win' : 
+         gameResultsStore.results.total_balance < 10000 ? 'lose' : 'neutral';
+});
+
+const initialBalance = 10000; // Starting balance is always 10000
+const finalBalance = computed(() => gameResultsStore.results?.total_balance || 0);
+const difference = computed(() => finalBalance.value - initialBalance);
 
 interface StatusConfig {
   bgColor: string;
@@ -25,7 +35,7 @@ interface StatusConfig {
 }
 
 const statusConfig = computed<StatusConfig>(() => {
-  switch (props.status) {
+  switch (status.value) {
     case 'win':
       return {
         bgColor: 'bg-emerald-700/10',
@@ -88,6 +98,11 @@ const tips = [
     description: 'Take calculated risks\nDon\'t be too conservative, but don\'t bet everything on one card either.'
   }
 ];
+
+const goToHome = () => {
+  gameResultsStore.clearResults();
+  router.push('/');
+};
 </script>
 
 <template>
@@ -173,11 +188,17 @@ const tips = [
         />
         <button
           class="px-8 py-3 border-2 border-white/15 rounded-md text-white hover:bg-white/5 transition-colors"
-          @click="emit('navigate', '/settings')"
+          @click="goToHome"
         >
           Back home
         </button>
       </div>
     </div>
   </div>
-</template> 
+</template>
+
+<style scoped>
+.font-orbitron {
+  font-family: 'Orbitron', sans-serif;
+}
+</style> 
