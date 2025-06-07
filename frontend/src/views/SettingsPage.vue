@@ -125,7 +125,7 @@ const startPlaying = async () => {
             <div class="w-12 h-12 rounded-lg overflow-hidden">
               <img src="/images/card-home/bookmark-2.png" alt="Categories" class="w-full h-full object-cover">
             </div>
-            <h2 class="text-xl font-bold text-white">Select up to 3 stock categories</h2>
+            <h2 class="text-xl font-bold text-white">Select 3 stock categories</h2>
           </div>
           <p class="text-gray-400 mb-6">We'll use your picks to show you the most relevant news and stock tips during the game.</p>
           

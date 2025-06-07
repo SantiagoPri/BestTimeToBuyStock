@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 interface Stock {
   name: string
@@ -24,6 +24,12 @@ const emit = defineEmits<{
 const shares = ref<number>(0)
 const isLoading = ref(false)
 const error = ref<string | null>(null)
+
+watch(() => props.visible, (newValue) => {
+  if (newValue) {
+    shares.value = 0
+  }
+})
 
 const total = computed(() => {
   return shares.value * props.stock.price

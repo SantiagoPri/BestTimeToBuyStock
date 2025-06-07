@@ -10,7 +10,7 @@
       <div class="flex items-center gap-4">
         <img src="/images/card-home/drakeHead.png" alt="Avatar" class="w-12 h-12 rounded-full" />
         <div class="flex flex-col">
-          <h2 class="text-2xl font-bold text-gray-100">Username</h2>
+          <h2 class="text-2xl font-bold text-gray-100">{{ username }}</h2>
           <span class="text-gray-400">Week {{ currentWeek }}/5</span>
         </div>
       </div>
@@ -191,6 +191,7 @@ const gameSessionService = new GameSessionService(new GameSessionApiRepository(n
 const gameResultsStore = useGameResultsStore()
 
 // State
+const username = ref('')
 const cash = ref(0)
 const holdingsValue = ref(0)
 const totalBalance = ref(0)
@@ -229,6 +230,7 @@ onMounted(async () => {
 
     // Get session state
     const sessionState = await gameSessionService.getSessionState()
+    username.value = sessionState.username
     cash.value = sessionState.cash
     holdingsValue.value = sessionState.holdings_value
     totalBalance.value = sessionState.total_balance
@@ -337,6 +339,7 @@ const handleNextWeek = async () => {
       
       // Reload session state and week data
       const sessionState = await gameSessionService.getSessionState()
+      
       cash.value = sessionState.cash
       holdingsValue.value = sessionState.holdings_value
       totalBalance.value = sessionState.total_balance
@@ -355,7 +358,7 @@ const handleNextWeek = async () => {
           company: stock.companyName,
           currentPrice: stock.price,
           change: stock.priceChange,
-          changePercent: `${stock.priceChange * 100 }%`, 
+          changePercent: `${(stock.priceChange * 100).toFixed(2)}%`, 
           ratings: `${stock.rating_from} -> ${stock.rating_to}`,
           marketSentiment: getMarketSentiment(stock.action)
         }))
