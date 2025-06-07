@@ -145,10 +145,10 @@
         :disabled="isAdvancing"
       >
         <template v-if="isAdvancing">
-          {{ currentWeek === 5 ? 'Ending...' : 'Advancing...' }}
+          {{ currentWeek === 5 ? 'Finishing...' : 'Advancing...' }}
         </template>
         <template v-else>
-          {{ currentWeek === 5 ? 'End Session' : 'Next Week' }}
+          {{ currentWeek === 5 ? 'Finish Game' : 'Next Week' }}
         </template>
       </button>
     </div>
@@ -247,7 +247,7 @@ onMounted(async () => {
         ticker: stock.ticker,
         company: stock.companyName,
         currentPrice: stock.price,
-        changePercent: `${stock.priceChange * 100 }%`, 
+        changePercent: `${(stock.priceChange * 100).toFixed(2)}%`,
         change: stock.priceChange,
         ratings: `${stock.rating_from} -> ${stock.rating_to}`,
         marketSentiment: getMarketSentiment(stock.action)
