@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import StockListView from '../../modules/stocks/presentation/views/StockListView.vue';
 import SettingsPage from '../../views/SettingsPage.vue';
 import Home from '../../components/Home.vue';
 import WeekGamePage from '../../views/WeekGamePage.vue';
@@ -19,11 +18,6 @@ const routes = [
     path: '/settings',
     name: 'settings',
     component: SettingsPage,
-  },
-  {
-    path: '/stocks',
-    name: 'stocks',
-    component: StockListView,
   },
   {
     path: '/week',
