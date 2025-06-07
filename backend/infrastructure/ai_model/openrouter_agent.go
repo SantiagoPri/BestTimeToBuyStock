@@ -142,7 +142,7 @@ func extractFirstJSONObject(raw string) (string, error) {
 				// Validate JSON structure
 				var js json.RawMessage
 				if err := json.Unmarshal([]byte(sanitized), &js); err != nil {
-					return "", fmt.Errorf("invalid JSON structure: %w", err)
+					return "", fmt.Errorf("invalid JSON structure: %w\nProblematic content: %s", err, sanitized)
 				}
 
 				return sanitized, nil

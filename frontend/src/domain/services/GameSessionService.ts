@@ -1,12 +1,13 @@
 import type { GameSession, CreateSessionRequest, CreateSessionResponse, TradeRequest } from '../entities/GameSession';
 import type { GameSessionRepository } from '../repositories/GameSessionRepository';
-import type { Stock } from '../../modules/stocks/domain/models/Stock';
 
 export interface ApiStock {
   ticker: string;
+  companyName: string;
+  priceChange: number;
   rating_from: string;
   rating_to: string;
-  action: string;
+  action: 'upgraded' | 'downgraded' | 'target raised' | 'target lowered' | 'reiterated';
   price: number;
 }
 

@@ -22,7 +22,6 @@ func NewService(repo gm_session.Repository) Service {
 }
 
 func (s *service) SaveGMWeekData(sessionID string, gmData map[string]*gm_session.GMWeekData) error {
-	// Save data for each week (1-5)
 	for i := 1; i <= 5; i++ {
 		weekKey := fmt.Sprintf("week%d", i)
 		weekData, exists := gmData[weekKey]

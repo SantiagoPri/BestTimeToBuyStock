@@ -77,37 +77,46 @@
         <table class="w-full">
           <thead>
             <tr class="text-left text-gray-100">
-              <th class="p-4 font-normal">NAME</th>
-              <th class="p-4 font-normal">TICKER</th>
-              <th class="p-4 font-normal">COMPANY</th>
-              <th class="p-4 font-normal">PRICE (USD)</th>
-              <th class="p-4 font-normal">CHANGE</th>
-              <th class="p-4 font-normal">YOU OWN</th>
-              <th class="p-4 font-normal">ACTIONS</th>
+              <th class="p-4 font-normal text-left">COMPANY</th>
+              <th class="p-4 font-normal text-left">TICKER</th>
+              <th class="p-4 font-normal text-center">RATINGS</th>
+              <th class="p-4 font-normal text-center">PRICE (USD)</th>
+              <th class="p-4 font-normal text-center">MOOD</th>
+              <th class="p-4 font-normal text-center">YOU OWN</th>
+              <th class="p-4 font-normal text-center">ACTIONS</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-700">
             <tr v-for="stock in availableStocks" :key="stock.ticker" class="text-gray-100 hover:bg-gray-700 transition-colors duration-150">
-              <td class="p-4">{{ stock.company }}</td>
-              <td class="p-4">
+              <td class="p-4 text-left">{{ stock.company }}</td>
+              <td class="p-4 text-left">
                 <span class="text-green-400">{{ stock.ticker }}</span>
               </td>
-              <td class="p-4">{{ stock.company }}</td>
-              <td class="p-4 font-bold">${{ stock.currentPrice.toFixed(2) }}</td>
-              <td class="p-4">
+              <td class="p-4 text-center">{{ stock.ratings }}</td>
+              <td class="p-4 text-center">
+                <span class="font-bold">${{ stock.currentPrice.toFixed(2) }}</span>
+                <span class="ml-4" :class="{
+                  'text-green-400': stock.change > 0,
+                  'text-red-400': stock.change < 0,
+                  'text-gray-400': stock.change === 0
+                }">
+                  {{ stock.change > 0 ? '+' : '' }}{{ stock.changePercent }}
+                </span>
+              </td>
+              <td class="p-4 text-center">
                 <component 
-                  :is="stock.change > 0 ? ArrowUpCircleIcon : stock.change < 0 ? ArrowDownCircleIcon : MinusCircleIcon"
-                  class="w-6 h-6"
+                  :is="stock.marketSentiment === 'up' ? ArrowUpCircleIcon : stock.marketSentiment === 'down' ? ArrowDownCircleIcon : MinusCircleIcon"
+                  class="w-8 h-8 mx-auto"
                   :class="{
-                    'text-green-500': stock.change > 0,
-                    'text-red-500': stock.change < 0,
-                    'text-gray-500': stock.change === 0
+                    'text-green-400 animate-bounce': stock.marketSentiment === 'up',
+                    'text-red-400 animate-bounce': stock.marketSentiment === 'down',
+                    'text-gray-400': stock.marketSentiment === 'neutral'
                   }"
                 />
               </td>
-              <td class="p-4">{{ holdings[stock.ticker] || 0 }}</td>
-              <td class="p-4">
-                <div class="flex gap-2">
+              <td class="p-4 text-center">{{ holdings[stock.ticker] || 0 }}</td>
+              <td class="p-4 text-center">
+                <div class="flex gap-2 justify-center">
                   <button 
                     class="bg-green-500 text-white px-8 py-2 rounded-md font-bold hover:bg-green-600 transition"
                     @click="openTradeModal(stock, 'buy')"
@@ -161,9 +170,9 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '../stores/useSessionStore'
 import { GameSessionService } from '../domain/services/GameSessionService'
+import { getMarketSentiment, type Stock } from '../domain/entities/Stock'
 import { GameSessionApiRepository } from '../infrastructure/repositories/GameSessionApiRepository'
 import { HttpClient } from '../infrastructure/http/HttpClient'
-import type { Stock, StockRecommendation } from '../modules/stocks/domain/models/Stock'
 import {
   WalletIcon,
   CircleStackIcon,
@@ -233,16 +242,15 @@ onMounted(async () => {
       // Get week data
       const weekData = await gameSessionService.getWeekData(currentWeek.value)
       marketNews.value = weekData.headlines
+      
       availableStocks.value = weekData.stocks.map(stock => ({
-        id: stock.ticker,
         ticker: stock.ticker,
-        company: stock.ticker,
+        company: stock.companyName,
         currentPrice: stock.price,
-        previousClose: stock.price,
-        change: 0,
-        changePercent: 0,
-        recommendation: stock.rating_to as StockRecommendation,
-        updatedAt: new Date().toISOString()
+        changePercent: `${stock.priceChange * 100 }%`, 
+        change: stock.priceChange,
+        ratings: `${stock.rating_from} -> ${stock.rating_to}`,
+        marketSentiment: getMarketSentiment(stock.action)
       }))
     } else {
       throw new Error('Invalid week format')
@@ -340,15 +348,13 @@ const handleNextWeek = async () => {
         const weekData = await gameSessionService.getWeekData(currentWeek.value)
         marketNews.value = weekData.headlines
         availableStocks.value = weekData.stocks.map(stock => ({
-          id: stock.ticker,
           ticker: stock.ticker,
-          company: stock.ticker,
+          company: stock.companyName,
           currentPrice: stock.price,
-          previousClose: stock.price,
-          change: 0,
-          changePercent: 0,
-          recommendation: stock.rating_to as StockRecommendation,
-          updatedAt: new Date().toISOString()
+          change: stock.priceChange,
+          changePercent: `${stock.priceChange * 100 }%`, 
+          ratings: `${stock.rating_from} -> ${stock.rating_to}`,
+          marketSentiment: getMarketSentiment(stock.action)
         }))
       }
     }

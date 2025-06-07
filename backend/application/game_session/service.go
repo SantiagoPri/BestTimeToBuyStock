@@ -10,7 +10,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"time"
 )
 
@@ -78,8 +77,6 @@ func (s *service) Create(username string, categories []string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get GM response: %w", err)
 	}
-
-	log.Printf("GM Response for session %s: %+v", sessionID, gmData)
 
 	if err := s.gmService.SaveGMWeekData(sessionID, gmData); err != nil {
 		return "", fmt.Errorf("failed to save GM week data: %w", err)

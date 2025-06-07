@@ -732,13 +732,13 @@ const docTemplate = `{
                 "action": {
                     "type": "string"
                 },
-                "company_name": {
+                "companyName": {
                     "type": "string"
                 },
                 "price": {
                     "type": "number"
                 },
-                "price_change": {
+                "priceChange": {
                     "type": "number"
                 },
                 "rating_from": {
