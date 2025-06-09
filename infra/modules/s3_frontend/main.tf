@@ -55,7 +55,7 @@ resource "aws_s3_bucket_cors_rule" "website" {
 
 resource "local_file" "env_file" {
   filename = "${path.module}/../frontend/.env"
-  content  = "API_URL=${var.backend_api_url}"
+  content  = "API_URL=${local.backend_api_resolved}"
   file_permission = "0644"
 }
 
@@ -67,6 +67,7 @@ resource "null_resource" "build_and_deploy_frontend" {
 
   provisioner "local-exec" {
     command = <<-EOT
+      which npm || echo "npm not found" && exit 1
       cd ${path.module}/../frontend && \
       npm install && \
       npm run build && \

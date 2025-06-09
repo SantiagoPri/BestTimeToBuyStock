@@ -1,7 +1,11 @@
-variable "bucket_name" {
-  description = "Name of the S3 bucket for static website hosting. If not provided, defaults to the hardcoded value in main.tf"
+variable "instance_name" {
+  description = "Name of the EC2 instance"
   type        = string
-  default     = null
+}
+
+variable "docker_image" {
+  description = "Docker image for the backend application"
+  type        = string
 }
 
 variable "database_url" {
@@ -12,6 +16,7 @@ variable "database_url" {
 variable "redis_password" {
   description = "Password for Redis"
   type        = string
+  sensitive   = true
 }
 
 variable "openrouter_api_key" {
@@ -25,8 +30,8 @@ variable "openrouter_model_name" {
   type        = string
 }
 
-variable "backend_api_url" {
-  description = "Optional override URL for the backend API. If not provided, will be constructed from the EC2 instance's public IP"
+variable "aws_region" {
+  description = "AWS region"
   type        = string
-  default     = null
+  default     = "us-east-1"
 } 
