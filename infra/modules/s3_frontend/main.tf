@@ -51,4 +51,28 @@ resource "aws_s3_bucket_cors_rule" "website" {
     expose_headers  = ["ETag"]
     max_age_seconds = 3000
   }
+}
+
+resource "local_file" "env_file" {
+  filename = "${path.module}/../frontend/.env"
+  content  = "API_URL=${var.backend_api_url}"
+  file_permission = "0644"
+}
+
+resource "null_resource" "build_and_deploy_frontend" {
+  triggers = {
+    env_file_content = local_file.env_file.content
+    frontend_dir_hash = sha256(join("", [for f in fileset("${path.module}/../frontend", "**/*"): filesha256("${path.module}/../frontend/${f}")]))
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      cd ${path.module}/../frontend && \
+      npm install && \
+      npm run build && \
+      aws s3 sync ./dist s3://${aws_s3_bucket.website.id} --delete
+    EOT
+  }
+
+  depends_on = [local_file.env_file]
 } 
