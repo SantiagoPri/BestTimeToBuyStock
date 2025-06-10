@@ -24,7 +24,7 @@ module "ec2_backend" {
   source = "./modules/ec2_backend"
 
   instance_name         = "besttime-backend"
-  docker_image         = "your-dockerhub-user/besttime-backend:latest"
+  docker_image         = "elardeluz/besttime-backend:latest"
   database_url         = var.database_url
   redis_password       = var.redis_password
   openrouter_api_key   = var.openrouter_api_key
