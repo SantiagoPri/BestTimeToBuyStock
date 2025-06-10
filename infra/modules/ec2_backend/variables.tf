@@ -34,4 +34,9 @@ variable "aws_region" {
   description = "AWS region"
   type        = string
   default     = "us-east-1"
+}
+
+variable "frontend_public_url" {
+  description = "URL of the deployed frontend, used for CORS"
+  type        = string
 } 

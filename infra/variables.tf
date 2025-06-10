@@ -29,4 +29,9 @@ variable "backend_api_url" {
   description = "Optional override URL for the backend API. If not provided, will be constructed from the EC2 instance's public IP"
   type        = string
   default     = null
+}
+
+variable "frontend_public_url" {
+  description = "URL of the deployed frontend, used for CORS"
+  type        = string
 } 

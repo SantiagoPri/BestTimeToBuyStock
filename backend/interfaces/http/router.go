@@ -14,6 +14,7 @@ import (
 	gameSessionHttp "backend/interfaces/http/game_session"
 	gmSessionHttp "backend/interfaces/http/gm_session"
 	stockHttp "backend/interfaces/http/stock"
+	"os"
 )
 
 type Router struct {
@@ -40,9 +41,13 @@ func NewRouter(
 func (r *Router) SetupRoutes() *gin.Engine {
 	router := gin.Default()
 
-	// Apply CORS middleware with custom configuration
+	allowedOrigins := []string{"http://localhost:5173", "http://127.0.0.1:5173"}
+	if frontendURL := os.Getenv("FRONTEND_PUBLIC_URL"); frontendURL != "" {
+		allowedOrigins = append(allowedOrigins, frontendURL)
+	}
+
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "http://127.0.0.1:5173"},
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},

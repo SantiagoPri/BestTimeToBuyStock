@@ -30,5 +30,6 @@ docker run -d \
   -e REDIS_PASSWORD="${redis_password}" \
   -e OPENROUTER_API_KEY="${openrouter_api_key}" \
   -e OPENROUTER_MODEL_NAME="${openrouter_model_name}" \
+  -e FRONTEND_PUBLIC_URL="${frontend_public_url}" \
   --network="host" \
   ${docker_image} 

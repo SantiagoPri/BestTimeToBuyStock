@@ -64,6 +64,7 @@ resource "aws_instance" "backend" {
     redis_password        = var.redis_password
     openrouter_api_key    = var.openrouter_api_key
     openrouter_model_name = var.openrouter_model_name
+    frontend_public_url   = var.frontend_public_url
   })
 
   tags = {
