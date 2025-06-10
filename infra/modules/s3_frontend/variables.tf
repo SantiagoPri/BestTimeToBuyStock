@@ -4,6 +4,6 @@ variable "bucket_name" {
 } 
 
 variable "backend_api_url" {
-  description = "The base URL of the backend Go service that the frontend will consume"
   type        = string
+  description = "The URL of the backend API that the frontend will communicate with"
 } 

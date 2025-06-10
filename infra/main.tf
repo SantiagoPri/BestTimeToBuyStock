@@ -37,5 +37,3 @@ module "s3_frontend" {
   bucket_name     = var.bucket_name
   backend_api_url = local.backend_api_resolved
 }
-
-`
