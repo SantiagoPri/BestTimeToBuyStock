@@ -46,9 +46,15 @@ resource "aws_security_group" "backend" {
   }
 }
 
+resource "aws_key_pair" "this" {
+  key_name   = "besttime-key"
+  public_key = file("~/.ssh/besttime_key.pub")
+}
+
 resource "aws_instance" "backend" {
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = "t2.micro"
+  key_name      = aws_key_pair.this.key_name
 
   vpc_security_group_ids = [aws_security_group.backend.id]
 
