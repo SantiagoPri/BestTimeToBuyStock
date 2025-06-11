@@ -125,3 +125,24 @@ func (r *repository) BeginTransaction(sessionID string) (game_session.GameSessio
 		session:      session,
 	}, nil
 }
+
+func (r *repository) UpdateGameCraftingStatus(sessionID string, success bool) error {
+	var entity GameSessionEntity
+	if err := r.db.Where("session_id = ? AND status = ?", sessionID, game_session.StatusStarting).First(&entity).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return errors.New(errors.ErrNotFound, "session not found or not in starting status")
+		}
+		return errors.Wrap(errors.ErrInternal, "failed to find session", err)
+	}
+
+	newStatus := game_session.StatusWeek1
+	if !success {
+		newStatus = game_session.StatusExpired
+	}
+
+	if err := r.db.Model(&entity).Update("status", newStatus).Error; err != nil {
+		return errors.Wrap(errors.ErrInternal, "failed to update session status", err)
+	}
+
+	return nil
+}

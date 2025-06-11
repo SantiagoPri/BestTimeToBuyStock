@@ -5,6 +5,7 @@ import (
 	"backend/domain/game_session"
 	"backend/domain/gm_session"
 	"backend/domain/stock"
+	"backend/infrastructure/taskrunner"
 	"backend/pkg/errors"
 	"context"
 	"crypto/rand"
@@ -23,13 +24,15 @@ type Service interface {
 	EndSession(sessionID string) (*game_session.GameSession, error)
 	SaveGMWeekData(sessionID string, gmData map[string]*gm_session.GMWeekData) error
 	GetWeekData(sessionID string, week int) (*gm_session.GMWeekData, error)
+	CraftTheGame(sessionID string, categories []string) error
 }
 
 type service struct {
-	repo      game_session.Repository
-	stockRepo stock.Repository
-	aiModel   gm_session.AI
-	gmService gmsvc.Service
+	repo       game_session.Repository
+	stockRepo  stock.Repository
+	aiModel    gm_session.AI
+	gmService  gmsvc.Service
+	taskRunner *taskrunner.TaskRunner
 }
 
 func NewService(
@@ -37,12 +40,14 @@ func NewService(
 	stockRepo stock.Repository,
 	aiModel gm_session.AI,
 	gmService gmsvc.Service,
+	taskRunner *taskrunner.TaskRunner,
 ) Service {
 	return &service{
-		repo:      repo,
-		stockRepo: stockRepo,
-		aiModel:   aiModel,
-		gmService: gmService,
+		repo:       repo,
+		stockRepo:  stockRepo,
+		aiModel:    aiModel,
+		gmService:  gmService,
+		taskRunner: taskRunner,
 	}
 }
 
@@ -68,20 +73,6 @@ func (s *service) Create(username string, categories []string) (string, error) {
 		return "", err
 	}
 
-	stocks, err := s.stockRepo.PickStocksForSession(categories)
-	if err != nil {
-		return "", fmt.Errorf("failed to pick stocks: %w", err)
-	}
-
-	gmData, err := s.aiModel.GetGMResponse(context.Background(), categories, stocks)
-	if err != nil {
-		return "", fmt.Errorf("failed to get GM response: %w", err)
-	}
-
-	if err := s.gmService.SaveGMWeekData(sessionID, gmData); err != nil {
-		return "", fmt.Errorf("failed to save GM week data: %w", err)
-	}
-
 	initialCash := 10000.00
 	session := &game_session.GameSession{
 		SessionID:     sessionID,
@@ -89,7 +80,7 @@ func (s *service) Create(username string, categories []string) (string, error) {
 		Cash:          initialCash,
 		HoldingsValue: 0.00,
 		TotalBalance:  initialCash,
-		Status:        game_session.StatusWeek1,
+		Status:        game_session.StatusStarting,
 		CreatedAt:     time.Now().Format(time.RFC3339),
 		UpdatedAt:     time.Now().Format(time.RFC3339),
 		Metadata: &game_session.SessionMetadata{
@@ -101,7 +92,42 @@ func (s *service) Create(username string, categories []string) (string, error) {
 		return "", err
 	}
 
+	s.taskRunner.Dispatch(func() {
+		if err := s.CraftTheGame(sessionID, categories); err != nil {
+			// Log the error but don't return it since this is a background task
+			fmt.Printf("Error crafting game for session %s: %v\n", sessionID, err)
+		}
+	})
+
 	return sessionID, nil
+}
+
+func (s *service) CraftTheGame(sessionID string, categories []string) error {
+	stocks, err := s.stockRepo.PickStocksForSession(categories)
+	if err != nil {
+		return fmt.Errorf("failed to pick stocks: %w", err)
+	}
+
+	gmData, err := s.aiModel.GetGMResponse(context.Background(), categories, stocks)
+	if err != nil {
+		if updateErr := s.repo.UpdateGameCraftingStatus(sessionID, false); updateErr != nil {
+			return fmt.Errorf("failed to update session status after AI error: %w", updateErr)
+		}
+		return fmt.Errorf("failed to get GM response: %w", err)
+	}
+
+	if err := s.gmService.SaveGMWeekData(sessionID, gmData); err != nil {
+		if updateErr := s.repo.UpdateGameCraftingStatus(sessionID, false); updateErr != nil {
+			return fmt.Errorf("failed to update session status after save error: %w", updateErr)
+		}
+		return fmt.Errorf("failed to save GM week data: %w", err)
+	}
+
+	if err := s.repo.UpdateGameCraftingStatus(sessionID, true); err != nil {
+		return fmt.Errorf("failed to update session status to week1: %w", err)
+	}
+
+	return nil
 }
 
 func getCurrentWeek(status game_session.GameSessionStatus) (int, error) {

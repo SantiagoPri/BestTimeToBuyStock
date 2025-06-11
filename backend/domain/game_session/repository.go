@@ -12,6 +12,7 @@ type Repository interface {
 	FindBySessionID(string) (*GameSession, error)
 	FindLeaderboardTop10(page, pageSize int) ([]GameSession, error)
 	BeginTransaction(sessionID string) (GameSessionTx, error)
+	UpdateGameCraftingStatus(sessionID string, success bool) error
 }
 
 type Pagination struct {

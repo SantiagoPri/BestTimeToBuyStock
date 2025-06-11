@@ -13,6 +13,7 @@ import (
 	gameSessionRepo "backend/infrastructure/repositories/game_session"
 	gmSessionRepo "backend/infrastructure/repositories/gm_session"
 	stockRepo "backend/infrastructure/repositories/stock"
+	"backend/infrastructure/taskrunner"
 )
 
 type Container struct {
@@ -20,9 +21,14 @@ type Container struct {
 	CategoryService    *categoryApp.CategoryService
 	GameSessionService gameSessionApp.Service
 	GMSessionService   gmSessionApp.Service
+	TaskRunner         *taskrunner.TaskRunner
 }
 
 func NewContainer(db *gorm.DB) *Container {
+	// Initialize TaskRunner with a buffer size of 100
+	tr := taskrunner.New(100)
+	tr.Start()
+
 	stockRepo := stockRepo.NewStockRepository(db)
 	stockService := stockApp.NewStockService(stockRepo)
 
@@ -47,6 +53,7 @@ func NewContainer(db *gorm.DB) *Container {
 		stockRepo,
 		aiModel,
 		gmSessionService,
+		tr, // Pass TaskRunner to game session service
 	)
 
 	return &Container{
@@ -54,5 +61,6 @@ func NewContainer(db *gorm.DB) *Container {
 		CategoryService:    categoryService,
 		GameSessionService: gameSessionService,
 		GMSessionService:   gmSessionService,
+		TaskRunner:         tr,
 	}
 }
