@@ -81,8 +81,6 @@ resource "aws_instance" "backend" {
     openrouter_api_key    = var.openrouter_api_key
     openrouter_model_name = var.openrouter_model_name
     frontend_public_url   = var.frontend_public_url
-    domain_name          = var.domain_name
-    duck_dns_token       = var.duck_dns_token
   })
 
   tags = {

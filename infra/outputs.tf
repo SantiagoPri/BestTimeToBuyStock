@@ -13,7 +13,12 @@ output "ec2_backend_public_ip" {
   value       = module.ec2_backend.public_ip
 }
 
-output "cloudfront_domain_name" {
-  description = "The domain name of the CloudFront distribution"
+output "cloudfront_frontend_domain" {
+  description = "The domain name of the frontend CloudFront distribution"
   value       = module.cloudfront_frontend.cloudfront_domain_name
+}
+
+output "cloudfront_backend_domain" {
+  description = "The domain name of the backend CloudFront distribution"
+  value       = module.cloudfront_backend.cloudfront_domain_name
 } 

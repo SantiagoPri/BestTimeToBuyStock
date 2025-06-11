@@ -42,14 +42,3 @@ variable "frontend_public_url" {
     error_message = "The frontend_public_url variable must be set in terraform.tfvars"
   }
 }
-
-variable "duck_dns_token" {
-  description = "Token for DuckDNS service"
-  type        = string
-  sensitive   = true
-}
-
-variable "domain_name" {
-  description = "Domain name for the application"
-  type        = string
-} 

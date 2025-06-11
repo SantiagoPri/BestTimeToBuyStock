@@ -31,8 +31,6 @@ module "ec2_backend" {
   openrouter_api_key   = var.openrouter_api_key
   openrouter_model_name = var.openrouter_model_name
   frontend_public_url   = local.frontend_url_resolved
-  duck_dns_token       = var.duck_dns_token
-  domain_name          = var.domain_name
 }
 
 module "s3_frontend" {
@@ -47,4 +45,10 @@ module "cloudfront_frontend" {
 
   bucket_domain_name = module.s3_frontend.website_endpoint
   region            = "us-east-1"
+}
+
+module "cloudfront_backend" {
+  source = "./modules/cloudfront_backend"
+
+  backend_domain_name = module.ec2_backend.public_dns
 }

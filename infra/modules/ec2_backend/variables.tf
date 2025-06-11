@@ -40,14 +40,3 @@ variable "frontend_public_url" {
   description = "URL of the deployed frontend, used for CORS"
   type        = string
 }
-
-variable "duck_dns_token" {
-  description = "Token for DuckDNS service"
-  type        = string
-  sensitive   = true
-}
-
-variable "domain_name" {
-  description = "Domain name for the application"
-  type        = string
-} 
