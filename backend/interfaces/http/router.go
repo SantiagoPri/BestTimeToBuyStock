@@ -16,6 +16,7 @@ import (
 	categoryHttp "backend/interfaces/http/category"
 	gameSessionHttp "backend/interfaces/http/game_session"
 	gmSessionHttp "backend/interfaces/http/gm_session"
+	middleware "backend/interfaces/http/middleware"
 	stockHttp "backend/interfaces/http/stock"
 )
 
@@ -43,10 +44,10 @@ func NewRouter(
 func (r *Router) SetupRoutes() *gin.Engine {
 	router := gin.Default()
 
-	// Get allowed origins from environment variable
+	router.Use(middleware.ErrorHandler())
+
 	allowedOrigins := []string{"http://localhost:5173", "https://d3unwpfx6pwsd0.cloudfront.net"}
 	if frontendURL := os.Getenv("FRONTEND_PUBLIC_URL"); frontendURL != "" {
-		// Split by comma in case we need multiple origins
 		origins := strings.Split(frontendURL, ",")
 		for _, origin := range origins {
 			allowedOrigins = append(allowedOrigins, strings.TrimSpace(origin))

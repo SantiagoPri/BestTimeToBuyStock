@@ -3,6 +3,7 @@ package game_session
 import (
 	"backend/application/game_session"
 	"backend/pkg/errors"
+	"log"
 	"net/http"
 	"strings"
 
@@ -86,6 +87,7 @@ func (h *Handler) CreateSession(c *gin.Context) {
 // @Success 200 {object} game_session.GameSession "Current session state"
 // @Failure 401 {object} errors.Error "Unauthorized - Invalid session"
 // @Failure 404 {object} errors.Error "Session not found"
+// @Failure 503 {object} errors.Error "Session is no longer active"
 // @Router /sessions/state [get]
 func (h *Handler) GetSessionState(c *gin.Context) {
 	sessionID := extractBearerToken(c)
@@ -96,7 +98,9 @@ func (h *Handler) GetSessionState(c *gin.Context) {
 
 	state, err := h.service.GetState(sessionID)
 	if err != nil {
-		_ = c.Error(err)
+		log.Printf("Handler: Error getting state for session %s: %v", sessionID, err)
+		c.Error(err)
+		c.Abort()
 		return
 	}
 

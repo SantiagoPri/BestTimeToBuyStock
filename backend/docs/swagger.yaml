@@ -423,6 +423,10 @@ paths:
           description: Session not found
           schema:
             $ref: '#/definitions/errors.Error'
+        "503":
+          description: Session is no longer active
+          schema:
+            $ref: '#/definitions/errors.Error'
       security:
       - BearerAuth: []
       summary: Get current session state

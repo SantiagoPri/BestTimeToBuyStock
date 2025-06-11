@@ -42,18 +42,17 @@ func NewContainer(db *gorm.DB) *Container {
 
 	redisService := redis.NewRedisService()
 
-	// Create GM session repository and service
 	gmSessionRepository := gmSessionRepo.NewRepository(redisService)
 	gmSessionService := gmSessionApp.NewService(gmSessionRepository)
 
-	// Create game session repository and service with all dependencies
 	gameSessionRepository := gameSessionRepo.NewRepository(db, redisService)
 	gameSessionService := gameSessionApp.NewService(
 		gameSessionRepository,
 		stockRepo,
+		categoryRepo,
 		aiModel,
 		gmSessionService,
-		tr, // Pass TaskRunner to game session service
+		tr,
 	)
 
 	return &Container{

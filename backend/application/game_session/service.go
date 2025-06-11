@@ -2,6 +2,7 @@ package game_session
 
 import (
 	gmsvc "backend/application/gm_session"
+	"backend/domain/category"
 	"backend/domain/game_session"
 	"backend/domain/gm_session"
 	"backend/domain/stock"
@@ -28,26 +29,29 @@ type Service interface {
 }
 
 type service struct {
-	repo       game_session.Repository
-	stockRepo  stock.Repository
-	aiModel    gm_session.AI
-	gmService  gmsvc.Service
-	taskRunner *taskrunner.TaskRunner
+	repo         game_session.Repository
+	stockRepo    stock.Repository
+	categoryRepo category.Repository
+	aiModel      gm_session.AI
+	gmService    gmsvc.Service
+	taskRunner   *taskrunner.TaskRunner
 }
 
 func NewService(
 	repo game_session.Repository,
 	stockRepo stock.Repository,
+	categoryRepo category.Repository,
 	aiModel gm_session.AI,
 	gmService gmsvc.Service,
 	taskRunner *taskrunner.TaskRunner,
 ) Service {
 	return &service{
-		repo:       repo,
-		stockRepo:  stockRepo,
-		aiModel:    aiModel,
-		gmService:  gmService,
-		taskRunner: taskRunner,
+		repo:         repo,
+		stockRepo:    stockRepo,
+		categoryRepo: categoryRepo,
+		aiModel:      aiModel,
+		gmService:    gmService,
+		taskRunner:   taskRunner,
 	}
 }
 
@@ -60,7 +64,11 @@ func generateSecureToken() (string, error) {
 }
 
 func (s *service) GetState(sessionID string) (*game_session.GameSession, error) {
-	return s.repo.FindBySessionID(sessionID)
+	session, err := s.repo.FindBySessionID(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	return session, nil
 }
 
 func (s *service) GetLeaderboard() ([]game_session.GameSession, error) {
@@ -103,12 +111,53 @@ func (s *service) Create(username string, categories []string) (string, error) {
 }
 
 func (s *service) CraftTheGame(sessionID string, categories []string) error {
-	stocks, err := s.stockRepo.PickStocksForSession(categories)
+	allCategories, err := s.categoryRepo.FindAll()
+	if err != nil {
+		return fmt.Errorf("failed to get categories: %w", err)
+	}
+
+	validSet := make(map[string]struct{})
+	validList := make([]string, 0, len(allCategories))
+	for _, cat := range allCategories {
+		validSet[cat.Name] = struct{}{}
+		validList = append(validList, cat.Name)
+	}
+
+	finalSet := make(map[string]struct{})
+	finalCategories := make([]string, 0, 3)
+
+	for _, cat := range categories {
+		if cat == "Trending" || cat == "Recent" {
+			continue
+		}
+		if _, ok := validSet[cat]; ok {
+			if _, exists := finalSet[cat]; !exists {
+				finalSet[cat] = struct{}{}
+				finalCategories = append(finalCategories, cat)
+			}
+		}
+	}
+
+	for _, candidate := range validList {
+		if len(finalCategories) == 3 {
+			break
+		}
+		if _, exists := finalSet[candidate]; !exists {
+			finalSet[candidate] = struct{}{}
+			finalCategories = append(finalCategories, candidate)
+		}
+	}
+
+	if len(finalCategories) != 3 {
+		return fmt.Errorf("could not finalize 3 valid categories")
+	}
+
+	stocks, err := s.stockRepo.PickStocksForSession(finalCategories)
 	if err != nil {
 		return fmt.Errorf("failed to pick stocks: %w", err)
 	}
 
-	gmData, err := s.aiModel.GetGMResponse(context.Background(), categories, stocks)
+	gmData, err := s.aiModel.GetGMResponse(context.Background(), finalCategories, stocks)
 	if err != nil {
 		if updateErr := s.repo.UpdateGameCraftingStatus(sessionID, false); updateErr != nil {
 			return fmt.Errorf("failed to update session status after AI error: %w", updateErr)

@@ -420,6 +420,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/errors.Error"
                         }
+                    },
+                    "503": {
+                        "description": "Session is no longer active",
+                        "schema": {
+                            "$ref": "#/definitions/errors.Error"
+                        }
                     }
                 }
             }

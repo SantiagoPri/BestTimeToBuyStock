@@ -75,14 +75,32 @@ const startPlaying = async () => {
         username: playerName.value,
         categories: selectedCategories.value.map(id => id.toString())
       })
-      
       sessionStore.setSessionId(response.sessionId)
+      await waitForSessionReady()
       await router.push('/week')
     } catch (error) {
       console.error('Error creating session:', error)
       showLoading.value = false
     }
   }
+}
+
+const waitForSessionReady = async (maxAttempts = 20) => {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const session = await gameService.getSessionState()
+
+    if (session.status === 'week1') {
+      return
+    }
+
+    if (session.status === 'expired') {
+      throw new Error('Session failed to initialize.')
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 10000)) 
+  }
+
+  throw new Error('Session took too long to be ready.')
 }
 
 
