@@ -1,6 +1,9 @@
 package http
 
 import (
+	"os"
+	"strings"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -14,7 +17,6 @@ import (
 	gameSessionHttp "backend/interfaces/http/game_session"
 	gmSessionHttp "backend/interfaces/http/gm_session"
 	stockHttp "backend/interfaces/http/stock"
-	"os"
 )
 
 type Router struct {
@@ -41,16 +43,26 @@ func NewRouter(
 func (r *Router) SetupRoutes() *gin.Engine {
 	router := gin.Default()
 
-	allowedOrigins := []string{"http://localhost:5173", "http://127.0.0.1:5173"}
+	// Get allowed origins from environment variable
+	allowedOrigins := []string{"http://localhost:5173", "https://d3unwpfx6pwsd0.cloudfront.net"}
 	if frontendURL := os.Getenv("FRONTEND_PUBLIC_URL"); frontendURL != "" {
-		allowedOrigins = append(allowedOrigins, frontendURL)
+		// Split by comma in case we need multiple origins
+		origins := strings.Split(frontendURL, ",")
+		for _, origin := range origins {
+			allowedOrigins = append(allowedOrigins, strings.TrimSpace(origin))
+		}
 	}
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     allowedOrigins,
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
+		AllowOrigins: allowedOrigins,
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization",
+			"Accept-Language", "Accept-Encoding", "Connection",
+			"Host", "Referer", "Sec-Fetch-Dest", "Sec-Fetch-Mode",
+			"Sec-Fetch-Site", "User-Agent", "Sec-Ch-Ua",
+			"Sec-Ch-Ua-Mobile", "Sec-Ch-Ua-Platform", "Sec-GPC",
+			"Cache-Control", "Pragma"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
 		AllowCredentials: true,
 		MaxAge:           12 * 60 * 60, // 12 hours
 	}))

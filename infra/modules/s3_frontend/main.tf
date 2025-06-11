@@ -61,7 +61,8 @@ resource "local_file" "env_file" {
 
 resource "null_resource" "build_and_deploy_frontend" {
   triggers = {
-    env_file_hash = filesha256("../frontend/.env")
+    backend_api_url = var.backend_api_url
+    bucket_name = var.bucket_name
   }
 
   provisioner "local-exec" {
@@ -78,5 +79,9 @@ resource "null_resource" "build_and_deploy_frontend" {
 EOT
   }
 
-  depends_on = [local_file.env_file]
+  depends_on = [
+    local_file.env_file,
+    aws_s3_bucket.website,
+    aws_s3_bucket_policy.website
+  ]
 } 

@@ -26,12 +26,30 @@ variable "openrouter_model_name" {
 }
 
 variable "backend_api_url" {
-  description = "Optional override URL for the backend API. If not provided, will be constructed from the EC2 instance's public IP"
+  description = "URL of the backend, used to configure the frontend"
   type        = string
-  default     = null
+  validation {
+    condition     = length(var.backend_api_url) > 0
+    error_message = "The backend_api_url variable must be set in terraform.tfvars"
+  }
 }
 
 variable "frontend_public_url" {
   description = "URL of the deployed frontend, used for CORS"
+  type        = string
+  validation {
+    condition     = length(var.frontend_public_url) > 0
+    error_message = "The frontend_public_url variable must be set in terraform.tfvars"
+  }
+}
+
+variable "duck_dns_token" {
+  description = "Token for DuckDNS service"
+  type        = string
+  sensitive   = true
+}
+
+variable "domain_name" {
+  description = "Domain name for the application"
   type        = string
 } 

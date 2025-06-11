@@ -7,23 +7,6 @@ terraform {
   }
 }
 
-# ACM Certificate provider alias for us-east-1 (required for CloudFront)
-provider "aws" {
-  alias  = "us_east_1"
-  region = "us-east-1"
-}
-
-# Create ACM certificate
-resource "aws_acm_certificate" "frontend" {
-  provider          = aws.us_east_1
-  domain_name       = var.bucket_domain_name
-  validation_method = "DNS"
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
 # CloudFront distribution
 resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true
@@ -41,6 +24,14 @@ resource "aws_cloudfront_distribution" "frontend" {
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
     }
+  }
+
+  # Custom error response
+  custom_error_response {
+    error_code            = 404
+    response_code         = 200
+    response_page_path    = "/index.html"
+    error_caching_min_ttl = 300
   }
 
   default_cache_behavior {
@@ -69,8 +60,6 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   viewer_certificate {
-    acm_certificate_arn      = aws_acm_certificate.frontend.arn
-    ssl_support_method       = "sni-only"
-    minimum_protocol_version = "TLSv1.2_2021"
+    cloudfront_default_certificate = true
   }
 } 

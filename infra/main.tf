@@ -17,8 +17,8 @@ provider "aws" {
 }
 
 locals {
-  backend_api_resolved = var.backend_api_url != null ? var.backend_api_url : "http://${module.ec2_backend.public_ip}:8080"
-  frontend_url_resolved = var.frontend_public_url != null ? var.frontend_public_url : "https://${module.cloudfront_frontend.cloudfront_domain_name}"
+  backend_api_resolved = var.backend_api_url
+  frontend_url_resolved = var.frontend_public_url
 }
 
 module "ec2_backend" {
@@ -31,6 +31,8 @@ module "ec2_backend" {
   openrouter_api_key   = var.openrouter_api_key
   openrouter_model_name = var.openrouter_model_name
   frontend_public_url   = local.frontend_url_resolved
+  duck_dns_token       = var.duck_dns_token
+  domain_name          = var.domain_name
 }
 
 module "s3_frontend" {
@@ -43,6 +45,6 @@ module "s3_frontend" {
 module "cloudfront_frontend" {
   source = "./modules/cloudfront_frontend"
 
-  bucket_domain_name = module.s3_frontend.website_url
+  bucket_domain_name = module.s3_frontend.website_endpoint
   region            = "us-east-1"
 }

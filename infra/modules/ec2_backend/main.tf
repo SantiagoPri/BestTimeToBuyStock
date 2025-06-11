@@ -26,6 +26,22 @@ resource "aws_security_group" "backend" {
   }
 
   ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTP access"
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTPS access"
+  }
+
+  ingress {
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
@@ -65,6 +81,8 @@ resource "aws_instance" "backend" {
     openrouter_api_key    = var.openrouter_api_key
     openrouter_model_name = var.openrouter_model_name
     frontend_public_url   = var.frontend_public_url
+    domain_name          = var.domain_name
+    duck_dns_token       = var.duck_dns_token
   })
 
   tags = {

@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# Redirect all output to log file
+exec > >(tee /var/log/user_data.log) 2>&1
+
+echo "[$(date)] Starting user data script execution"
+
 # Update system packages
 yum update -y
 
@@ -32,4 +37,6 @@ docker run -d \
   -e OPENROUTER_MODEL_NAME="${openrouter_model_name}" \
   -e FRONTEND_PUBLIC_URL="${frontend_public_url}" \
   --network="host" \
-  ${docker_image} 
+  ${docker_image}
+
+// echo "[$(date)] User data script execution completed"

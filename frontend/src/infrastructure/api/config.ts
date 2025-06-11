@@ -1,4 +1,6 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+// Ensure HTTPS is used for non-localhost URLs
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+export const API_BASE_URL = apiUrl.startsWith('http://localhost') ? apiUrl : apiUrl.replace('http://', 'https://');
 
 export const endpoints = {
   categories: '/categories',
